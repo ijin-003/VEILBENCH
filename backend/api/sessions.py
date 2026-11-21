@@ -1,0 +1,174 @@
+"""Coordinator management API; it intentionally contains no salary endpoint."""
+
+import secrets
+from datetime import datetime
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Header, HTTPException, status
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from backend.config import settings
+from backend.models import BenchmarkSession
+from backend.mpc.distributed_coordinator import DistributedCoordinator
+from backend.mpc.exceptions import ConfigurationError, MPCTimeoutError, PartyDisconnectedError
+from backend.security.tokens import issue_founder_token
+from backend.services.database import get_database_session
+from backend.services.session_service import (
+    SessionLifecycleError,
+    compute_session,
+    create_session,
+    get_session,
+    refresh_submission_state,
+)
+
+router = APIRouter(prefix="/sessions")
+
+
+class CreateSessionRequest(BaseModel):
+    ttl_minutes: int = Field(default=30, ge=5, le=120)
+
+
+class FounderInvite(BaseModel):
+    party_id: int
+    submission_page: str
+    submission_api: str
+    capability_token: str
+
+
+class SessionResult(BaseModel):
+    aggregate_sum: int
+    average_salary: float
+
+
+class SessionView(BaseModel):
+    session_id: str
+    state: str
+    created_at: datetime
+    expires_at: datetime
+    submitted_party_ids: list[int]
+    result: SessionResult | None = None
+    failure_reason: str | None = None
+
+
+class CreatedSession(SessionView):
+    founder_invites: list[FounderInvite]
+
+
+def _as_view(record: BenchmarkSession) -> SessionView:
+    result = None
+    if record.aggregate_sum is not None and record.average_salary is not None:
+        result = SessionResult(aggregate_sum=record.aggregate_sum, average_salary=record.average_salary)
+    return SessionView(
+        session_id=record.id,
+        state=record.state,
+        created_at=record.created_at,
+        expires_at=record.expires_at,
+        submitted_party_ids=sorted(record.submitted_party_ids or []),
+        result=result,
+        failure_reason=record.failure_reason,
+    )
+
+
+async def require_management_token(
+    provided: Annotated[str | None, Header(alias="X-VEILBENCH-Admin-Token")] = None,
+) -> None:
+    if not settings.COORDINATOR_ADMIN_TOKEN:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Coordinator management authentication is not configured",
+        )
+    if provided is None or not secrets.compare_digest(provided, settings.COORDINATOR_ADMIN_TOKEN):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid management credential")
+
+
+ManagementAccess = Annotated[None, Depends(require_management_token)]
+DatabaseSession = Annotated[AsyncSession, Depends(get_database_session)]
+
+
+def _coordinator() -> DistributedCoordinator:
+    try:
+        settings.validate_mpc_runtime()
+        return DistributedCoordinator(
+            settings.party_urls,
+            settings.party_control_tokens,
+            ca_cert_path=settings.MPC_CA_CERT_PATH,
+            client_cert_path=settings.MPC_CLIENT_CERT_PATH,
+            client_key_path=settings.MPC_CLIENT_KEY_PATH,
+            require_tls=settings.MPC_REQUIRE_TLS,
+            timeout=settings.MPC_TIMEOUT_SECONDS,
+        )
+    except (RuntimeError, ConfigurationError) as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="MPC session runtime is not configured",
+        ) from error
+
+
+def _session_or_404_error(error: Exception) -> HTTPException:
+    if isinstance(error, LookupError):
+        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Benchmark session was not found")
+    if isinstance(error, SessionLifecycleError):
+        return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
+    if isinstance(error, (MPCTimeoutError, PartyDisconnectedError, ConfigurationError)):
+        return HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="An MPC party is unavailable")
+    return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Session operation failed")
+
+
+@router.post("", response_model=CreatedSession, status_code=status.HTTP_201_CREATED)
+async def start_session(
+    request: CreateSessionRequest,
+    _: ManagementAccess,
+    db: DatabaseSession,
+) -> CreatedSession:
+    _coordinator()  # Fail before persisting an unusable session.
+    ttl_seconds = min(request.ttl_minutes * 60, settings.SESSION_TTL_SECONDS)
+    record = await create_session(db, ttl_seconds)
+    expires_at = int(record.expires_at.timestamp())
+    invites = [
+        FounderInvite(
+            party_id=party_id,
+            submission_page=f"{settings.FRONTEND_PUBLIC_URL.rstrip('/')}/submit/{record.id}/{party_id}",
+            submission_api=f"{settings.MPC_PARTY_PUBLIC_URLS[party_id].rstrip('/')}/sessions/{record.id}/input",
+            capability_token=issue_founder_token(
+                settings.founder_secrets[party_id], record.id, party_id, expires_at
+            ),
+        )
+        for party_id in range(3)
+    ]
+    return CreatedSession(**_as_view(record).model_dump(), founder_invites=invites)
+
+
+@router.get("/{session_id}", response_model=SessionView)
+async def session_status(
+    session_id: str,
+    _: ManagementAccess,
+    db: DatabaseSession,
+) -> SessionView:
+    try:
+        record = await get_session(db, session_id)
+        if record.state not in ("completed", "failed", "expired"):
+            record = await refresh_submission_state(db, record, _coordinator())
+        return _as_view(record)
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise _session_or_404_error(error) from error
+
+
+@router.post("/{session_id}/compute", response_model=SessionView)
+async def run_session(
+    session_id: str,
+    _: ManagementAccess,
+    db: DatabaseSession,
+) -> SessionView:
+    try:
+        record = await get_session(db, session_id)
+        if record.state not in ("completed", "failed", "expired"):
+            record = await refresh_submission_state(db, record, _coordinator())
+        record = await compute_session(db, record, _coordinator())
+        return _as_view(record)
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise _session_or_404_error(error) from error

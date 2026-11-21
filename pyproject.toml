@@ -1,0 +1,24 @@
+[project]
+name = "veilbench-backend"
+version = "0.1.0"
+description = "VEILBENCH - Secure Multiparty Computation Salary Benchmarking System"
+readme = "README.md"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "B", "A", "C4"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --asyncio-mode=auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["backend/tests"]
+pythonpath = ["backend"]
+markers = [
+    "mpyc: tests that start actual MPyC party processes and require local loopback sockets",
+]

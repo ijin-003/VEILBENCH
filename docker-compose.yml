@@ -1,0 +1,162 @@
+# VEILBENCH local academic demonstration topology.
+#
+# Run scripts/generate_certs.py and populate an untracked .env before starting.
+# Every salary is sent from a founder browser directly to its assigned party;
+# the backend only stores session metadata and final aggregate results.
+
+services:
+  veilbench-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - veilbench-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  veilbench-backend:
+    build:
+      context: .
+      dockerfile: infrastructure/Dockerfile.backend
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@veilbench-db:5432/${POSTGRES_DB}
+      ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      FRONTEND_PUBLIC_URL: http://localhost:3000
+      COORDINATOR_ADMIN_TOKEN: ${COORDINATOR_ADMIN_TOKEN:?set COORDINATOR_ADMIN_TOKEN in .env}
+      MPC_FOUNDER_TOKEN_SECRET_0: ${MPC_FOUNDER_TOKEN_SECRET_0:?set party 0 signing secret}
+      MPC_FOUNDER_TOKEN_SECRET_1: ${MPC_FOUNDER_TOKEN_SECRET_1:?set party 1 signing secret}
+      MPC_FOUNDER_TOKEN_SECRET_2: ${MPC_FOUNDER_TOKEN_SECRET_2:?set party 2 signing secret}
+      MPC_REQUIRE_TLS: "true"
+      MPC_NODE0_URL: https://veilbench-mpc-node0:8100
+      MPC_NODE1_URL: https://veilbench-mpc-node1:8100
+      MPC_NODE2_URL: https://veilbench-mpc-node2:8100
+      MPC_NODE0_TOKEN: ${MPC_NODE0_TOKEN:?set MPC_NODE0_TOKEN in .env}
+      MPC_NODE1_TOKEN: ${MPC_NODE1_TOKEN:?set MPC_NODE1_TOKEN in .env}
+      MPC_NODE2_TOKEN: ${MPC_NODE2_TOKEN:?set MPC_NODE2_TOKEN in .env}
+      MPC_CA_CERT_PATH: /app/certs/ca/ca.crt
+      MPC_CLIENT_CERT_PATH: /app/certs/coordinator/coordinator.crt
+      MPC_CLIENT_KEY_PATH: /app/certs/coordinator/coordinator.key
+      MPC_PARTY_PUBLIC_URLS: https://localhost:8100,https://localhost:8101,https://localhost:8102
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./infrastructure/certs/ca/ca.crt:/app/certs/ca/ca.crt:ro
+      - ./infrastructure/certs/api/api.crt:/app/certs/api/api.crt:ro
+      - ./infrastructure/certs/api/api.key:/app/certs/api/api.key:ro
+      - ./infrastructure/certs/coordinator/coordinator.crt:/app/certs/coordinator/coordinator.crt:ro
+      - ./infrastructure/certs/coordinator/coordinator.key:/app/certs/coordinator/coordinator.key:ro
+    depends_on:
+      veilbench-db:
+        condition: service_healthy
+      veilbench-mpc-node0:
+        condition: service_healthy
+      veilbench-mpc-node1:
+        condition: service_healthy
+      veilbench-mpc-node2:
+        condition: service_healthy
+    networks:
+      - veilbench-net
+      - mpc-internal-net
+
+  veilbench-frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../infrastructure/Dockerfile.frontend
+    environment:
+      NEXT_PUBLIC_API_URL: https://localhost:8000
+      NEXT_PUBLIC_PARTY_0_URL: https://localhost:8100
+      NEXT_PUBLIC_PARTY_1_URL: https://localhost:8101
+      NEXT_PUBLIC_PARTY_2_URL: https://localhost:8102
+    ports:
+      - "3000:3000"
+    depends_on:
+      - veilbench-backend
+    networks:
+      - veilbench-net
+
+  veilbench-mpc-node0:
+    build:
+      context: .
+      dockerfile: infrastructure/Dockerfile.mpc-node
+    environment: &party_environment
+      MPC_PARTIES_COUNT: "3"
+      MPC_FOUNDER_TOKEN_SECRET: ${MPC_FOUNDER_TOKEN_SECRET_0:?set party 0 signing secret}
+      MPC_ENABLE_TLS: "true"
+      MPC_PARTY_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      MPC_BASE_PORT: "11365"
+      MPC_PARTY_0_HOST: veilbench-mpc-node0
+      MPC_PARTY_1_HOST: veilbench-mpc-node1
+      MPC_PARTY_2_HOST: veilbench-mpc-node2
+      MPC_PARTY_ID: "0"
+      MPC_COORDINATOR_TOKEN: ${MPC_NODE0_TOKEN:?set MPC_NODE0_TOKEN in .env}
+    ports:
+      - "8100:8100"
+    volumes: &party0_certs
+      - ./infrastructure/certs/ca/ca.crt:/app/certs/ca/ca.crt:ro
+      - ./infrastructure/certs/ca/ca.crt:/app/.config/mpyc_ca.crt:ro
+      - ./infrastructure/certs/party_0/control/control.crt:/app/certs/control/control.crt:ro
+      - ./infrastructure/certs/party_0/control/control.key:/app/certs/control/control.key:ro
+      - ./infrastructure/certs/party_0/party_0.crt:/app/.config/party_0.crt:ro
+      - ./infrastructure/certs/party_0/party_0.key:/app/.config/party_0.key:ro
+    networks:
+      - mpc-internal-net
+
+  veilbench-mpc-node1:
+    build:
+      context: .
+      dockerfile: infrastructure/Dockerfile.mpc-node
+    environment:
+      <<: *party_environment
+      MPC_PARTY_ID: "1"
+      MPC_FOUNDER_TOKEN_SECRET: ${MPC_FOUNDER_TOKEN_SECRET_1:?set party 1 signing secret}
+      MPC_COORDINATOR_TOKEN: ${MPC_NODE1_TOKEN:?set MPC_NODE1_TOKEN in .env}
+    ports:
+      - "8101:8100"
+    volumes:
+      - ./infrastructure/certs/ca/ca.crt:/app/certs/ca/ca.crt:ro
+      - ./infrastructure/certs/ca/ca.crt:/app/.config/mpyc_ca.crt:ro
+      - ./infrastructure/certs/party_1/control/control.crt:/app/certs/control/control.crt:ro
+      - ./infrastructure/certs/party_1/control/control.key:/app/certs/control/control.key:ro
+      - ./infrastructure/certs/party_1/party_1.crt:/app/.config/party_1.crt:ro
+      - ./infrastructure/certs/party_1/party_1.key:/app/.config/party_1.key:ro
+    networks:
+      - mpc-internal-net
+
+  veilbench-mpc-node2:
+    build:
+      context: .
+      dockerfile: infrastructure/Dockerfile.mpc-node
+    environment:
+      <<: *party_environment
+      MPC_PARTY_ID: "2"
+      MPC_FOUNDER_TOKEN_SECRET: ${MPC_FOUNDER_TOKEN_SECRET_2:?set party 2 signing secret}
+      MPC_COORDINATOR_TOKEN: ${MPC_NODE2_TOKEN:?set MPC_NODE2_TOKEN in .env}
+    ports:
+      - "8102:8100"
+    volumes:
+      - ./infrastructure/certs/ca/ca.crt:/app/certs/ca/ca.crt:ro
+      - ./infrastructure/certs/ca/ca.crt:/app/.config/mpyc_ca.crt:ro
+      - ./infrastructure/certs/party_2/control/control.crt:/app/certs/control/control.crt:ro
+      - ./infrastructure/certs/party_2/control/control.key:/app/certs/control/control.key:ro
+      - ./infrastructure/certs/party_2/party_2.crt:/app/.config/party_2.crt:ro
+      - ./infrastructure/certs/party_2/party_2.key:/app/.config/party_2.key:ro
+    networks:
+      - mpc-internal-net
+
+networks:
+  veilbench-net:
+    driver: bridge
+  mpc-internal-net:
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres_data:

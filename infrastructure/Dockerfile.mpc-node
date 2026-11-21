@@ -1,0 +1,38 @@
+# Dockerfile for a single VEILBENCH MPC party node.
+# Each node runs the party_service FastAPI app as an independent process.
+#
+# TRUST MODEL LIMITATION:
+# Running three containers on the same Docker host does NOT provide
+# independent organizational trust. See docs/DISTRIBUTED_INFRASTRUCTURE.md.
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# OpenSSL is used by the explicit certificate-generation step.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+COPY backend/ ./backend/
+COPY pyproject.toml .
+
+RUN mkdir -p /app/.config /app/certs/control /app/certs/ca
+
+# MPC party service port (overridden per-node via env)
+EXPOSE 8100
+
+# The control-plane certificate includes localhost as a SAN.
+HEALTHCHECK --interval=5s --timeout=3s --retries=5 \
+    CMD python -c "import ssl, urllib.request; c=ssl.create_default_context(cafile='/app/certs/ca/ca.crt'); urllib.request.urlopen('https://localhost:8100/health', context=c)" || exit 1
+
+# HTTPS protects direct founder input and coordinator control requests. MPyC
+# mTLS material is mounted separately at /app/.config for its subprocesses.
+CMD ["sh", "-c", "test -r /app/certs/control/control.crt && test -r /app/certs/control/control.key && test -r /app/certs/ca/ca.crt && exec uvicorn backend.mpc.party_service:app --host 0.0.0.0 --port 8100 --ssl-certfile /app/certs/control/control.crt --ssl-keyfile /app/certs/control/control.key --ssl-ca-certs /app/certs/ca/ca.crt"]
