@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.health import router as health_router
+from backend.api.accounts import router as accounts_router
 from backend.api.sessions import router as sessions_router
 from backend.config import settings
 from backend.services.database import database
@@ -44,6 +45,7 @@ app.add_middleware(
 # Register routers
 app.include_router(health_router, prefix=settings.API_V1_PREFIX, tags=["Health"])
 app.include_router(sessions_router, prefix=settings.API_V1_PREFIX, tags=["Sessions"])
+app.include_router(accounts_router, prefix=settings.API_V1_PREFIX, tags=["Accounts"])
 # Root health route alias
 app.include_router(health_router, tags=["Health"])
 

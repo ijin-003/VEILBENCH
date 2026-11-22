@@ -19,6 +19,7 @@ from backend.mpc.exceptions import (
     PartyDisconnectedError,
 )
 from backend.security.tokens import issue_founder_token
+from backend.security.accounts import current_account
 from backend.services.database import get_database_session
 from backend.services.session_service import (
     SessionLifecycleError,
@@ -79,7 +80,14 @@ def _as_view(record: BenchmarkSession) -> SessionView:
 
 async def require_management_token(
     provided: Annotated[str | None, Header(alias="X-VEILBENCH-Admin-Token")] = None,
+    authorization: Annotated[str | None, Header()] = None,
+    db: AsyncSession = Depends(get_database_session),
 ) -> None:
+    if authorization:
+        account = await current_account(db, authorization)
+        if account.role != "admin":
+            raise HTTPException(403, "Administrator access required")
+        return
     if not settings.COORDINATOR_ADMIN_TOKEN:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -131,6 +139,7 @@ async def start_session(
     response: Response,
     _: ManagementAccess,
     db: DatabaseSession,
+    authorization: Annotated[str | None, Header()] = None,
 ) -> CreatedSession:
     # This response contains three short-lived founder capabilities. Never let
     # browsers, reverse proxies, or shared caches retain the invitation payload.
@@ -146,7 +155,7 @@ async def start_session(
             party_id=party_id,
             submission_page=f"{settings.FRONTEND_PUBLIC_URL.rstrip('/')}/submit/{record.id}/{party_id}",
             submission_api=f"{settings.MPC_PARTY_PUBLIC_URLS[party_id].rstrip('/')}/sessions/{record.id}/input",
-            capability_token=issue_founder_token(
+            capability_token="" if isinstance(authorization, str) else issue_founder_token(
                 settings.founder_secrets[party_id], record.id, party_id, expires_at
             ),
         )

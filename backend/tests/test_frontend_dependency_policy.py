@@ -26,7 +26,7 @@ def test_frontend_pins_supported_next16_security_stack():
 
 
 def test_health_check_effect_uses_async_request_without_stateful_callback():
-    source = (FRONTEND / "src/app/page.tsx").read_text(encoding="utf-8")
+    source = (FRONTEND / "src/app/AdminDashboard.tsx").read_text(encoding="utf-8")
     request_start = source.index("const requestHealth = useCallback")
     check_start = source.index("const checkHealth = useCallback", request_start)
     effect_start = source.index("useEffect(() => {", check_start)

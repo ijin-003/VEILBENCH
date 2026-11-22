@@ -12,12 +12,14 @@ const partyUrls: Record<string, string | undefined> = {
 export default function FounderSubmissionForm({
   sessionId,
   partyId,
+  accountCapability,
 }: {
   sessionId: string;
   partyId: string;
+  accountCapability?: string;
 }) {
   const [salary, setSalary] = useState("");
-  const [capability, setCapability] = useState("");
+  const [capability, setCapability] = useState(accountCapability || "");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -103,11 +105,11 @@ export default function FounderSubmissionForm({
         </div>
         <p className="mt-3 text-sm text-slate-400">
           Your salary is sent directly from this browser to your assigned MPC party. It is not sent to the
-          coordinator. Use only the one-time capability issued for this invitation.
+          coordinator. Your account invitation identifies your assigned party and benchmark.
         </p>
         <div className="mt-4 flex items-start gap-2 rounded-md border border-indigo-900 bg-indigo-950/40 p-3 text-xs text-indigo-200">
           <ShieldCheck className="h-4 w-4 shrink-0" />
-          <p>Keep your capability private. It is single-use and should not be shared with another founder.</p>
+          <p>Keep your credentials private. Each participant may submit only once to their assigned party.</p>
         </div>
 
         {submitted ? (
@@ -131,7 +133,7 @@ export default function FounderSubmissionForm({
                 aria-label="Salary"
               />
             </label>
-            <label className="block text-sm">
+            {!accountCapability && <label className="block text-sm">
               One-time founder capability
               <input
                 className="input mt-1 w-full"
@@ -142,7 +144,7 @@ export default function FounderSubmissionForm({
                 disabled={submitting}
                 aria-label="Founder capability"
               />
-            </label>
+            </label>}
             <button className="button-primary w-full" type="submit" disabled={submitting}>
               {submitting ? "Submitting privately…" : "Submit directly to my party"}
             </button>

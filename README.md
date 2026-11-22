@@ -1,3 +1,5 @@
+> **Fast $0 academic deployment:** See [Zero-Budget Deployment](docs/ZERO_BUDGET_DEPLOYMENT.md) for Vercel Free + one Render Free web service + Neon Free PostgreSQL, with account login and real MPyC processes. This is a shared-host proof of concept, **not independent-operator privacy**.
+
 # VEILBENCH
 
 VEILBENCH is an academic three-founder salary-benchmark demo. Three isolated
