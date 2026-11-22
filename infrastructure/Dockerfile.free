@@ -1,0 +1,12 @@
+FROM python:3.11-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+WORKDIR /app
+COPY backend/requirements-prod.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+COPY backend/ /app/backend/
+COPY scripts/start_free_host.py /app/scripts/start_free_host.py
+COPY alembic.ini pyproject.toml /app/
+RUN useradd --create-home --uid 10001 veilbench && chown -R veilbench:veilbench /app
+USER 10001
+EXPOSE 10000
+CMD ["python", "-m", "scripts.start_free_host"]

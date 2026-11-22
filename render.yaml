@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: veilbench-poc
+    runtime: docker
+    plan: free
+    dockerfilePath: ./infrastructure/Dockerfile.free
+    dockerContext: .
+    healthCheckPath: /health/ready
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: FRONTEND_PUBLIC_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: VEILBENCH_INITIAL_ADMIN_USERNAME
+        sync: false
+      - key: VEILBENCH_INITIAL_ADMIN_PASSWORD
+        sync: false
+      - key: COORDINATOR_ADMIN_TOKEN
+        generateValue: true
+      - key: MPC_NODE0_TOKEN
+        generateValue: true
+      - key: MPC_NODE1_TOKEN
+        generateValue: true
+      - key: MPC_NODE2_TOKEN
+        generateValue: true
+      - key: MPC_FOUNDER_TOKEN_SECRET_0
+        generateValue: true
+      - key: MPC_FOUNDER_TOKEN_SECRET_1
+        generateValue: true
+      - key: MPC_FOUNDER_TOKEN_SECRET_2
+        generateValue: true
