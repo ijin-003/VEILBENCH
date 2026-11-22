@@ -1,14 +1,21 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* =========================================
+   VEILBENCH - EXISTING APPLICATION STYLES
+   ========================================= */
 
 @layer components {
   .input {
     @apply rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none placeholder:text-slate-600 focus:border-indigo-400;
   }
+
   .button-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-700;
   }
+
   .button-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-100 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50;
   }
@@ -17,371 +24,596 @@
 :root {
   --background: #0a0f1d;
   --foreground: #f8fafc;
+
+  --vb-black: #11100f;
+  --vb-red: #e50922;
+  --vb-ivory: #f7e9d0;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Arial, sans-serif;
 }
-
 
 /* =========================================
-   VEILBENCH — RED VANGUARD DESIGN SYSTEM
-   Homepage / Phase 1
+   RED VANGUARD - CINEMATIC HOMEPAGE
    ========================================= */
 
-:root {
-    --vb-black: #11100f;
-    --vb-red: #e50922;
-    --vb-ivory: #f7e9d0;
+.vanguard {
+  position: relative;
+  width: 100%;
+  height: 100svh;
+  min-height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+  background: #080707;
+  color: var(--vb-ivory);
 }
 
-/* Main cinematic canvas */
-.vanguard {
-    position: relative;
-    width: 100%;
-    min-height: 100svh;
-    overflow: hidden;
-    isolation: isolate;
-    background: var(--vb-black);
-    color: var(--vb-ivory);
+/* =========================================
+   RESPONSIVE ARTWORK STAGE
+   Original illustration: 1672 x 941
+   ========================================= */
+
+.vanguard-stage {
+  --vb-x: 0px;
+  --vb-y: 0px;
+
+  position: absolute;
+  top: 50%;
+  left: 50%;
+
+  width: min(100vw, 177.6833svh);
+  aspect-ratio: 1672 / 941;
+
+  transform: translate3d(
+    calc(-50% + var(--vb-x)),
+    calc(-50% + var(--vb-y)),
+    0
+  );
+
+  transition: transform 450ms ease-out;
+  will-change: transform;
+  isolation: isolate;
 }
+
+/* Full illustration - no cropping or stretching */
 
 .vanguard-art {
-    position: absolute;
-    inset: 0;
-    z-index: -2;
-    background-image: url("/images/veilbench-hero.png");
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    animation: vb-reveal 1s ease-out both;
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+
+  background-image: url("/images/veilbench-hero.png");
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  animation: vb-breathe 10s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+
+/* =========================================
+   CINEMATIC ATMOSPHERE
+   ========================================= */
+
+.vanguard-light {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Animated crimson lighting */
+
+.vanguard-light::before {
+  content: "";
+  position: absolute;
+
+  inset: -25%;
+
+  background: linear-gradient(
+    115deg,
+    transparent 28%,
+    rgba(229, 9, 34, 0.025) 43%,
+    rgba(255, 50, 65, 0.075) 49%,
+    rgba(255, 255, 255, 0.025) 51%,
+    transparent 66%
+  );
+
+  transform: translateX(-60%);
+  animation: vb-light-sweep 12s linear infinite;
+}
+
+/* Soft animated vignette */
+
+.vanguard-light::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    transparent 48%,
+    rgba(0, 0, 0, 0.10) 100%
+  );
+
+  opacity: 0.4;
+  animation: vb-vignette 7s ease-in-out infinite alternate;
 }
 
 .vanguard-grain {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.012) 0px,
+    rgba(255, 255, 255, 0.012) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+
+  opacity: 0.3;
+}
+
+/* =========================================
+   DESKTOP NAVIGATION
+   Aligned with original illustration
+   ========================================= */
+
+.vanguard-nav {
+  position: absolute;
+  z-index: 10;
+
+  top: 3%;
+  right: 3.4%;
+
+  width: 21.5%;
+  height: 7%;
+
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 3%;
+}
+
+.vanguard-nav-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+
+  width: 23%;
+  border: 0;
+  background: transparent;
+  color: var(--vb-ivory);
+
+  cursor: pointer;
+
+  transition:
+    transform 250ms ease,
+    filter 250ms ease;
+}
+
+.vanguard-nav-button svg {
+  opacity: 0;
+  width: 22px;
+  height: 22px;
+}
+
+.vanguard-nav-button:hover {
+  transform: translateY(-3px) scale(1.05);
+  filter: drop-shadow(
+    0 0 8px rgba(229, 9, 34, 0.65)
+  );
+}
+
+.vanguard-nav-button:focus-visible {
+  outline: 2px solid var(--vb-ivory);
+  outline-offset: 3px;
+  background: rgba(229, 9, 34, 0.2);
+}
+
+/* =========================================
+   INTERACTIVE START BUTTON
+   ========================================= */
+
+.vanguard-start {
+  position: absolute;
+  z-index: 10;
+
+  left: 19%;
+  top: 55%;
+
+  width: 14%;
+  aspect-ratio: 1;
+
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+
+  cursor: pointer;
+
+  transition:
+    transform 350ms cubic-bezier(.2,.8,.2,1),
+    filter 350ms ease;
+}
+
+.vanguard-start:hover {
+  transform: scale(1.09) rotate(-4deg);
+
+  filter: drop-shadow(
+    0 0 18px rgba(229, 9, 34, 0.45)
+  );
+}
+
+.vanguard-start:active {
+  transform: scale(0.97);
+}
+
+.vanguard-start:focus-visible {
+  outline: 3px solid var(--vb-ivory);
+  outline-offset: 5px;
+}
+
+.vanguard-start-mobile,
+.vanguard-mobile-content {
+  display: none;
+}
+
+/* =========================================
+   INFORMATION PANEL
+   ========================================= */
+
+.vanguard-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(9px);
+
+  animation: vb-fade 250ms ease-out;
+}
+
+.vanguard-panel {
+  width: min(560px, 100%);
+  height: 100%;
+
+  padding: clamp(28px, 5vw, 70px);
+  overflow-y: auto;
+
+  background: #141211;
+  border-left: 4px solid var(--vb-red);
+
+  box-shadow: -25px 0 80px rgba(0,0,0,.4);
+
+  animation: vb-slide-in 450ms cubic-bezier(.2,.8,.2,1);
+}
+
+.vanguard-panel-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  color: #b9a99b;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .18em;
+}
+
+.vanguard-panel-top button {
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--vb-ivory);
+  cursor: pointer;
+
+  transition: transform 200ms ease;
+}
+
+.vanguard-panel-top button:hover {
+  transform: rotate(90deg);
+}
+
+.vanguard-panel-top button:focus-visible,
+.vanguard-panel-enter:focus-visible {
+  outline: 2px solid var(--vb-ivory);
+  outline-offset: 4px;
+}
+
+.vanguard-panel-number {
+  display: block;
+  margin-top: clamp(55px, 10vh, 110px);
+
+  color: var(--vb-red);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .3em;
+}
+
+.vanguard-panel h2 {
+  margin-top: 15px;
+
+  font-size: clamp(42px, 5vw, 74px);
+  font-weight: 1000;
+  font-style: italic;
+  letter-spacing: -.075em;
+  line-height: .95;
+  text-transform: uppercase;
+}
+
+.vanguard-panel p {
+  max-width: 410px;
+  margin-top: 28px;
+
+  color: #cbbfb2;
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.vanguard-panel-steps {
+  display: grid;
+  gap: 12px;
+  margin-top: 36px;
+}
+
+.vanguard-panel-steps span {
+  padding: 16px;
+  border-left: 3px solid var(--vb-red);
+
+  background: rgba(255,255,255,.04);
+
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+
+.vanguard-panel-enter {
+  display: inline-flex;
+  align-items: center;
+  gap: 30px;
+
+  margin-top: 45px;
+  padding: 17px 25px;
+
+  border: none;
+  background: var(--vb-red);
+  color: white;
+
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: .15em;
+
+  transform: skewX(-9deg);
+  cursor: pointer;
+
+  transition:
+    background 200ms ease,
+    transform 200ms ease;
+}
+
+.vanguard-panel-enter:hover {
+  background: #ff263c;
+  transform: skewX(-9deg) translateX(5px);
+}
+
+/* =========================================
+   CINEMATIC ANIMATIONS
+   ========================================= */
+
+@keyframes vb-breathe {
+  0% {
+    transform: translateY(0) scale(1);
+    filter: brightness(1);
+  }
+
+  50% {
+    transform: translateY(-2px) scale(1.003);
+    filter: brightness(1.025);
+  }
+
+  100% {
+    transform: translateY(1px) scale(1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes vb-light-sweep {
+  0% {
+    transform: translateX(-60%);
+  }
+
+  100% {
+    transform: translateX(60%);
+  }
+}
+
+@keyframes vb-vignette {
+  0% {
+    opacity: .2;
+  }
+
+  100% {
+    opacity: .6;
+  }
+}
+
+@keyframes vb-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes vb-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* =========================================
+   MOBILE RESPONSIVENESS
+   ========================================= */
+
+@media (max-width: 767px) {
+  .vanguard-stage {
+    width: 100vw;
+    height: 100svh;
+    aspect-ratio: auto;
+  }
+
+  .vanguard-art {
+    opacity: .58;
+    background-size: cover;
+    background-position: 63% center;
+    animation: none;
+  }
+
+  .vanguard-stage::after {
+    content: "";
     position: absolute;
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    background: linear-gradient( 110deg, transparent 35%, rgba(0, 0, 0, 0.03) 60%, transparent 100% );
-}
 
-/* Desktop navigation: aligns to embedded artwork */
-.vanguard-nav {
-    position: absolute;
-    z-index: 5;
-    top: 3%;
-    right: 3.4%;
-    width: 21.5%;
-    height: 7%;
-    display: flex;
-    align-items: stretch;
-    justify-content: space-between;
-    gap: 3%;
-}
+    background: linear-gradient(
+      to bottom,
+      rgba(12,10,10,.55),
+      rgba(12,10,10,.25) 38%,
+      rgba(12,10,10,.85)
+    );
+  }
 
-.vanguard-nav-button {
-    position: relative;
-    width: 23%;
-    border: 0;
-    cursor: pointer;
-    background: transparent;
-    color: var(--vb-ivory);
-    transition: transform 250ms ease;
-}
+  .vanguard-nav {
+    top: 22px;
+    right: 20px;
+    width: auto;
+    height: 43px;
+    gap: 13px;
+  }
 
-    .vanguard-nav-button svg {
-        opacity: 0;
-    }
+  .vanguard-nav-button {
+    width: 36px;
 
-    .vanguard-nav-button:hover {
-        transform: translateY(-3px);
-    }
+    display: grid;
+    place-items: center;
 
-    .vanguard-nav-button:focus-visible {
-        outline: 2px solid var(--vb-ivory);
-        outline-offset: 3px;
-        background: rgba(229, 9, 34, 0.25);
-    }
+    background: rgba(0,0,0,.55);
+    border: 1px solid rgba(247,233,208,.3);
+    border-radius: 3px;
+  }
 
-/* Invisible hit area over the illustrated START circle */
-.vanguard-start {
-    position: absolute;
-    z-index: 4;
-    left: 19%;
-    top: 55%;
-    width: 14%;
-    aspect-ratio: 1;
-    border-radius: 50%;
-    border: 0;
-    background: transparent;
-    cursor: pointer;
-    transition: transform 350ms cubic-bezier(.2,.8,.2,1);
-}
+  .vanguard-nav-button svg {
+    opacity: 1;
+    width: 19px;
+    height: 19px;
+  }
 
-    .vanguard-start:hover {
-        transform: scale(1.06);
-    }
-
-    .vanguard-start:focus-visible {
-        outline: 3px solid var(--vb-ivory);
-        outline-offset: 5px;
-    }
-
-.vanguard-start-mobile,
-.vanguard-mobile-content {
+  .vanguard-start {
     display: none;
-}
+  }
 
-/* Decorative pager drawn in the source artwork */
-.vanguard-index {
-    display: none;
-}
+  .vanguard-mobile-content {
+    position: absolute;
+    left: 7%;
+    right: 7%;
+    bottom: 11%;
+    z-index: 8;
 
-/* Information overlay */
-.vanguard-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 50;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    background: rgba(0, 0, 0, 0.70);
-    backdrop-filter: blur(9px);
-    animation: vb-fade 250ms ease-out;
-}
-
-.vanguard-panel {
-    width: min(560px, 100%);
-    height: 100%;
-    padding: clamp(28px, 5vw, 70px);
-    overflow-y: auto;
-    background: #141211;
-    border-left: 4px solid var(--vb-red);
-    box-shadow: -25px 0 80px rgba(0,0,0,.4);
-    animation: vb-slide-in 450ms cubic-bezier(.2,.8,.2,1);
-}
-
-.vanguard-panel-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    color: #b9a99b;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .18em;
-}
-
-    .vanguard-panel-top button {
-        padding: 8px;
-        color: var(--vb-ivory);
-        transition: transform 200ms;
-    }
-
-        .vanguard-panel-top button:hover {
-            transform: rotate(90deg);
-        }
-
-.vanguard-panel-number {
     display: block;
-    margin-top: clamp(55px, 10vh, 110px);
-    color: var(--vb-red);
-    font-size: 12px;
-    font-weight: 900;
-    letter-spacing: .3em;
-}
+  }
 
-.vanguard-panel h2 {
-    margin-top: 15px;
-    font-size: clamp(42px, 5vw, 74px);
+  .vanguard-mobile-kicker {
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .25em;
+  }
+
+  .vanguard-mobile-content h1 {
+    margin-top: 13px;
+
+    font-size: clamp(49px, 12vw, 85px);
+    line-height: .9;
+    letter-spacing: -.075em;
     font-weight: 1000;
     font-style: italic;
-    letter-spacing: -.075em;
-    line-height: .95;
-    text-transform: uppercase;
-}
 
-.vanguard-panel p {
-    max-width: 410px;
-    margin-top: 28px;
-    font-size: 15px;
-    line-height: 1.85;
-    color: #cbbfb2;
-}
+    text-shadow: 4px 4px 0 var(--vb-red);
+  }
 
-.vanguard-panel-steps {
-    display: grid;
-    gap: 12px;
-    margin-top: 36px;
-}
+  .vanguard-mobile-content p {
+    margin-top: 20px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .18em;
+  }
 
-    .vanguard-panel-steps span {
-        padding: 16px;
-        border-left: 3px solid var(--vb-red);
-        background: rgba(255,255,255,.04);
-        font-size: 12px;
-        font-weight: 900;
-        letter-spacing: .14em;
-    }
-
-.vanguard-panel-enter {
+  .vanguard-mobile-cta {
     display: inline-flex;
     align-items: center;
-    gap: 30px;
-    margin-top: 45px;
-    padding: 17px 25px;
+    gap: 25px;
+
+    margin-top: 33px;
+    padding: 16px 23px;
+
+    border: 0;
     background: var(--vb-red);
     color: white;
+
+    font-size: 13px;
     font-weight: 900;
-    font-style: italic;
-    letter-spacing: .15em;
-    transform: skewX(-9deg);
-    transition: background 200ms, transform 200ms;
+    letter-spacing: .13em;
+
+    transform: skewX(-8deg);
+    cursor: pointer;
+  }
+
+  .vanguard-mobile-cta:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 4px;
+  }
+
+  .vanguard-panel {
+    border-left-width: 0;
+    border-top: 4px solid var(--vb-red);
+  }
 }
 
-    .vanguard-panel-enter:hover {
-        background: #ff263c;
-        transform: skewX(-9deg) translateX(5px);
-    }
-
-/* Animations */
-@keyframes vb-reveal {
-    from {
-        opacity: 0;
-        transform: scale(1.035);
-    }
-
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-@keyframes vb-fade {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes vb-slide-in {
-    from {
-        opacity: 0;
-        transform: translateX(50px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-/* Responsive presentation */
-@media (max-width: 767px) {
-    .vanguard-art {
-        opacity: .58;
-        background-size: auto 100%;
-        background-position: 63% center;
-    }
-
-    .vanguard::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        z-index: -1;
-        pointer-events: none;
-        background: linear-gradient( to bottom, rgba(12,10,10,.55), rgba(12,10,10,.25) 38%, rgba(12,10,10,.85) 100% );
-    }
-
-    .vanguard-nav {
-        top: 22px;
-        right: 20px;
-        width: auto;
-        height: 43px;
-        gap: 13px;
-    }
-
-    .vanguard-nav-button {
-        width: 36px;
-        display: grid;
-        place-items: center;
-        background: rgba(0,0,0,.55);
-        border: 1px solid rgba(247,233,208,.3);
-        border-radius: 3px;
-    }
-
-        .vanguard-nav-button svg {
-            opacity: 1;
-            width: 19px;
-            height: 19px;
-        }
-
-    .vanguard-start {
-        display: none;
-    }
-
-    .vanguard-mobile-content {
-        position: absolute;
-        left: 7%;
-        right: 7%;
-        bottom: 11%;
-        display: block;
-    }
-
-    .vanguard-mobile-kicker {
-        color: #fff;
-        font-size: 10px;
-        font-weight: 800;
-        letter-spacing: .25em;
-    }
-
-    .vanguard-mobile-content h1 {
-        margin-top: 13px;
-        font-size: clamp(49px, 12vw, 85px);
-        line-height: .9;
-        letter-spacing: -.075em;
-        font-weight: 1000;
-        font-style: italic;
-        text-shadow: 4px 4px 0 var(--vb-red);
-    }
-
-    .vanguard-mobile-content p {
-        margin-top: 20px;
-        font-size: 11px;
-        font-weight: 800;
-        letter-spacing: .18em;
-    }
-
-    .vanguard-mobile-cta {
-        display: inline-flex;
-        align-items: center;
-        gap: 25px;
-        margin-top: 33px;
-        padding: 16px 23px;
-        background: var(--vb-red);
-        color: white;
-        font-size: 13px;
-        font-weight: 900;
-        letter-spacing: .13em;
-        transform: skewX(-8deg);
-    }
-
-    .vanguard-panel {
-        border-left-width: 0;
-        border-top: 4px solid var(--vb-red);
-    }
-}
+/* =========================================
+   REDUCED MOTION ACCESSIBILITY
+   ========================================= */
 
 @media (prefers-reduced-motion: reduce) {
-    .vanguard *,
-    .vanguard *::before,
-    .vanguard *::after {
-        animation: none !important;
-        transition: none !important;
-    }
+  .vanguard-stage {
+    transform: translate(-50%, -50%) !important;
+  }
+
+  .vanguard *,
+  .vanguard *::before,
+  .vanguard *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
