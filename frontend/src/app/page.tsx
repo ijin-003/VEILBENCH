@@ -2,6 +2,7 @@
 import { FormEvent, useState } from "react";
 import AdminDashboard from "./AdminDashboard";
 import VanguardHero from "./VanguardHero";
+import { GuidedTour, ProtocolWalkthrough } from "./LearningCenter";
 import FounderSubmissionForm from "./submit/[sessionId]/[partyId]/FounderSubmissionForm";
 const api = (process.env.NEXT_PUBLIC_API_URL || "https://localhost:8000").replace(/\/+$/, "");
 type Identity = { token: string; role: string; username: string };
@@ -58,24 +59,29 @@ export default function HomePage() {
   );
 }
   if (identity) return <>
-    <nav className="flex justify-between bg-slate-900 p-4 text-slate-100"><span>{identity.username} · {identity.role}</span><button className="button-secondary" disabled={busy} onClick={() => void logout()}>Sign out</button></nav>
+    <nav className="flex flex-wrap items-center justify-between gap-3 bg-slate-900 p-4 text-slate-100"><span>{identity.username} · {identity.role}</span><div className="flex flex-wrap items-center gap-2"><GuidedTour role={identity.role === "admin" ? "admin" : "participant"} /><button className="button-secondary" disabled={busy} onClick={() => void logout()}>Sign out</button></div></nav>
     {message && <p role="alert" className="p-4 text-rose-500">{message}</p>}
     {identity.role === "admin" ? <AdminDashboard token={identity.token} /> : assignment ? <FounderSubmissionForm sessionId={assignment.session_id} partyId={String(assignment.party_id)} accountCapability={assignment.capability} /> : <p className="p-6">No active assignment.</p>}
+    {identity.role === "admin" && <div className="mx-auto max-w-5xl px-6 pb-10"><ProtocolWalkthrough /></div>}
   </>;
   return <main className="min-h-screen bg-slate-950 p-6 text-slate-100"><section className="mx-auto mt-16 max-w-md space-y-5 rounded-xl border border-slate-800 bg-slate-900 p-6">
     <button
-  type="button"
-className = "button-secondary"
-onClick = {() => {
-    setShowLanding(true);
-    setMessage("");
-    setPassword("");
-    setInvitation("");
-}}
->
-  ← Back to homepage
+      type="button"
+      className="button-secondary"
+      onClick={() => {
+        setShowLanding(true);
+        setMessage("");
+        setPassword("");
+        setInvitation("");
+      }}
+    >
+      ← Back to homepage
     </button>
-    <h1 className="text-3xl font-bold text-indigo-300" > VEILBENCH < /h1><h2>{activate ? "Activate your invitation" : "Sign in"}</h2 >
+    <h1 className="text-3xl font-bold text-indigo-300">VEILBENCH</h1>
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <h2>{activate ? "Activate your invitation" : "Sign in"}</h2>
+      <GuidedTour role="welcome" />
+    </div>
     <form onSubmit={submit} className="space-y-4">
       <label className="block">Username<input required className="input mt-1 w-full" autoComplete="username" pattern="[a-z0-9][a-z0-9_.-]+" minLength={3} maxLength={80} value={username} onChange={e => setUsername(e.target.value.toLowerCase())} /></label>
       {activate && <label className="block">Invitation code<input required className="input mt-1 w-full" type="password" autoComplete="off" value={invitation} onChange={e => setInvitation(e.target.value)} /></label>}
@@ -85,5 +91,5 @@ onClick = {() => {
     <button className="button-secondary" disabled={busy} onClick={() => { setActivate(!activate); setPassword(""); setInvitation(""); setMessage(""); }}>{activate ? "Back to sign in" : "I have an invitation"}</button>
     {message && <p role="status">{message}</p>}
     <p className="text-xs text-slate-400">Three MPC processes share demonstration infrastructure. Accounts separate participation, not hosting ownership.</p>
-  </section></main>;
+  </section><div className="mx-auto mt-6 max-w-5xl"><ProtocolWalkthrough /></div></main>;
 }
