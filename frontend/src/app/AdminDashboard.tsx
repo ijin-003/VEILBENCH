@@ -248,63 +248,62 @@ export default function AdminDashboard({ token }: { token: string }) {
     `${submittedCount} OF 3 INPUTS SECURED`;
 
   return (
-    <main className={`ch-root ch-state-${state} ${isComputing ? "ch-is-computing" : ""}`}>
-      <div className="ch-ambient" aria-hidden="true" />
-      <div className="ch-inner">
-        <header className="ch-header">
-          <div className="ch-heading">
-            <span className="ch-kicker">PROTOCOL / 02 <b>/</b> THREE-PARTY MPC</span>
-            <h1>THE <em>REACTOR.</em></h1>
+    <main className={`r4-reactor-root r4-reactor-${state}`}>
+      <div className="r4-reactor-layout">
+        <header className="r4-reactor-head">
+          <div>
+            <span className="r4-kicker">THE REACTOR / 03</span>
+            <h1>THREE IN. <em>ONE OUT.</em></h1>
           </div>
-          <div className="ch-header-tools">
-            <div className={`ch-connection ${isConnected ? "ch-connection--online" : ""}`} role="status">
-              <span /> {healthLoading ? "CONNECTING" : isConnected ? "LINK ACTIVE" : "LINK UNVERIFIED"}
-            </div>
-            <button type="button" className="ch-tool-button" ref={drawerButtonRef} onClick={() => setDrawerOpen(true)} aria-expanded={drawerOpen} aria-controls="ch-drawer" aria-label="Open session controls">
-              <Menu size={18} aria-hidden="true" /> <span>SESSION TOOLS</span>
+          <div className="r4-reactor-actions">
+            <span className={`r4-link ${isConnected ? "r4-link--online" : ""}`} role="status">
+              <i />{healthLoading ? "CONNECTING" : isConnected ? "LINK ACTIVE" : "LINK UNVERIFIED"}
+            </span>
+            <button ref={drawerButtonRef} className="r4-tools" type="button" onClick={() => setDrawerOpen(true)} aria-controls="ch-drawer" aria-expanded={drawerOpen}>
+              <Menu size={18} aria-hidden="true" /> SESSION TOOLS
             </button>
           </div>
         </header>
 
-        <section className="ch-stage" aria-label="Secure three-party reactor">
+        <section className="r4-reactor-view" aria-label="Three-founder computation chamber">
           <ReactorStage submitted={submitted} stage={isComputing ? "computing" : state} />
-          <div className="ch-stage-counter" aria-hidden="true"><span>{String(submittedCount).padStart(2, "0")}</span><small>/ 03</small></div>
-          {complete && resultOpen && session?.result && (
-            <div className="ch-result" role="region" aria-label="Computed aggregate results">
-              <div className="ch-result-head"><span>OUTPUT RELEASED</span><button type="button" onClick={() => setResultOpen(false)} aria-label="Hide result panel"><X size={16}/></button></div>
-              <div className="ch-result-title">COLLECTIVE <em>INSIGHT.</em></div>
-              <div className="ch-result-data"><div><small>AGGREGATE SUM</small><strong>{numberFormat.format(session.result.aggregate_sum)}</strong></div><div><small>AVERAGE SALARY</small><strong>{numberFormat.format(session.result.average_salary)}</strong></div></div>
-              <p>Only aggregate statistics are published.</p>
-            </div>
-          )}
         </section>
 
-        <div className="ch-console">
-          <div className="ch-console-status" role="status" aria-live="polite">
-            <div className={`ch-status-light ${complete ? "ch-status-light--complete" : ""} ${isComputing ? "ch-status-light--running" : ""}`} />
-            <div><span className="ch-status-index">REACTOR STATUS</span><strong>{headline}</strong></div>
+        <div className="r4-reactor-command">
+          <div className="r4-reactor-status" role="status" aria-live="polite">
+            <span className="r4-status-eyebrow">LIVE PROTOCOL STATUS</span>
+            <strong>{headline}</strong>
           </div>
-          <div className="ch-command-group">
-            {session && <button type="button" className="ch-refresh" onClick={() => void refreshSession()} disabled={busy} title="Refresh live submission status" aria-label="Refresh submission status"><RefreshCw size={18} aria-hidden="true" /></button>}
+          <div className="r4-command-buttons">
+            {session && <button type="button" className="r4-refresh" onClick={() => void refreshSession()} disabled={busy} aria-label="Refresh submission status" title="Refresh"><RefreshCw size={19} aria-hidden="true"/></button>}
             {!session ? (
-              <button type="button" className="ch-main-action" disabled={busy} onClick={() => void createSession()}>{busy ? <LoaderCircle className="ch-spin"/> : <Plus/>} INITIALIZE SESSION <ArrowRight aria-hidden="true"/></button>
+              <button type="button" className="r4-primary" disabled={busy} onClick={() => void createSession()}>{busy ? <LoaderCircle size={18} className="ch-spin"/> : <Plus size={18}/>} CREATE SESSION <ArrowRight size={18}/></button>
             ) : canCompute ? (
-              <button type="button" className="ch-main-action" onClick={() => void compute()}><Play size={17} fill="currentColor"/> ENGAGE COMPUTATION <ArrowRight aria-hidden="true"/></button>
+              <button type="button" className="r4-primary" onClick={() => void compute()}><Play size={17}/> ENGAGE COMPUTATION <ArrowRight size={18}/></button>
             ) : complete ? (
-              <button type="button" className="ch-main-action ch-main-action--ivory" onClick={() => setResultOpen((value) => !value)}><Check size={17}/> {resultOpen ? "RESULT REVEALED" : "REVEAL RESULT"} <ChevronRight aria-hidden="true"/></button>
+              <button type="button" className="r4-primary r4-primary--light" onClick={() => setResultOpen(value => !value)}><Check size={17}/>{resultOpen ? "HIDE RESULT" : "REVEAL RESULT"}<ChevronRight size={18}/></button>
             ) : fault ? (
-              <button type="button" className="ch-main-action" onClick={() => setDrawerOpen(true)}><CircleAlert size={17}/> SESSION OPTIONS <ArrowRight aria-hidden="true"/></button>
+              <button type="button" className="r4-primary" onClick={() => setDrawerOpen(true)}><CircleAlert size={17}/> SESSION OPTIONS <ArrowRight size={18}/></button>
             ) : (
-              <button type="button" className="ch-main-action" disabled><LockKeyhole size={17}/> {isComputing ? "COMPUTING…" : "WAITING FOR CARTRIDGES"}</button>
+              <button type="button" className="r4-primary" disabled><LockKeyhole size={17}/>{isComputing ? "COMPUTING…" : "AWAITING THREE INPUTS"}</button>
             )}
           </div>
         </div>
-        {(error || pollWarning || session?.failure_reason) && <div className="ch-messages">
-          {error && <p role="alert" className="ch-error">{error}</p>}
-          {session?.failure_reason && <p role="alert" className="ch-error">{session.failure_reason}</p>}
-          {pollWarning && <p role="status" className="ch-warning">Sync warning: {pollWarning}</p>}
+
+        {complete && resultOpen && session?.result && (
+          <section className="r4-results" aria-label="Computed aggregate results" aria-live="polite">
+            <span className="r4-results-mark">AGGREGATE / RELEASED</span>
+            <div><small>SUM</small><strong>{numberFormat.format(session.result.aggregate_sum)}</strong></div>
+            <div><small>AVERAGE</small><strong>{numberFormat.format(session.result.average_salary)}</strong></div>
+          </section>
+        )}
+
+        {(error || pollWarning || session?.failure_reason) && <div className="r4-alerts">
+          {error && <p role="alert">{error}</p>}
+          {session?.failure_reason && <p role="alert">{session.failure_reason}</p>}
+          {pollWarning && <p role="status">Sync warning: {pollWarning}</p>}
         </div>}
-        <p className="ch-privacy-note"><ShieldCheck size={13} aria-hidden="true"/> Cartridge docking represents confirmed submission status. Individual salaries are sent directly to assigned parties, not this coordinator.</p>
+        <p className="r4-privacy"><ShieldCheck size={14} aria-hidden="true"/> Submission status only. Individual salaries never appear in this interface.</p>
       </div>
 
       {drawerOpen && <div className="ch-drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setDrawerOpen(false); }}>
