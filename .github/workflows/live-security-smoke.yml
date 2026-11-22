@@ -1,0 +1,20 @@
+name: Live security smoke (read only)
+
+on:
+  pull_request:
+    paths:
+      - "scripts/live_security_smoke.py"
+      - ".github/workflows/live-security-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-read-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read-only public HTTPS security checks
+        run: python scripts/live_security_smoke.py
