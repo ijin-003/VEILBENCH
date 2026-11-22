@@ -22,6 +22,7 @@ export default function DesignPreviewPage() {
       </header>
       <p className="vb-review-notice">VISUAL-ONLY MOCK DATA — NO AUTHENTICATION OR COMPUTATION IS PERFORMED ON THIS PAGE.</p>
       <nav className="vb-review-jump" aria-label="Preview screens">
+        <a href="/design-preview/signup">00 / ACCESS / SIGNUP</a>
         <a href="#reactor">01 / REACTOR</a>
         <a href="#founder">02 / FOUNDER</a>
         <a href="#result">03 / RESULTS</a>
