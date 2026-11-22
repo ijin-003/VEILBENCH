@@ -3,7 +3,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import AdminDashboard from "./AdminDashboard";
 import VanguardHero from "./VanguardHero";
 import AuthGateway from "./AuthGateway";
-import { GuidedTour, ProtocolWalkthrough } from "./LearningCenter";
+import { GuidedTour } from "./LearningCenter";
 import FounderSubmissionForm from "./submit/[sessionId]/[partyId]/FounderSubmissionForm";
 const api = (process.env.NEXT_PUBLIC_API_URL || "https://localhost:8000").replace(/\/+$/, "");
 type Identity = { token: string; role: string; username: string };
@@ -73,11 +73,23 @@ export default function HomePage() {
       {leavingLanding && <div className="vb-access-wipe" aria-hidden="true"><span>ACCESS / INITIATING</span></div>}
     </>;
   }
+  if (identity?.role === "admin") return (
+    <div className="ch-app-layout">
+      <nav className="ch-app-nav" aria-label="Administrator navigation">
+        <div className="ch-app-brand"><i aria-hidden="true"/><b>VEILBENCH</b><small>/ CHAMBER ACCESS</small></div>
+        <div className="ch-app-controls">
+          <GuidedTour role="admin" />
+          <button type="button" disabled={busy} onClick={() => void logout()}>SIGN OUT</button>
+        </div>
+      </nav>
+      {message && <p role="alert" className="p-3 text-rose-300">{message}</p>}
+      <AdminDashboard token={identity.token} />
+    </div>
+  );
   if (identity) return <>
-    <nav className="flex flex-wrap items-center justify-between gap-3 bg-slate-900 p-4 text-slate-100"><span>{identity.username} · {identity.role}</span><div className="flex flex-wrap items-center gap-2"><GuidedTour role={identity.role === "admin" ? "admin" : "participant"} /><button className="button-secondary" disabled={busy} onClick={() => void logout()}>Sign out</button></div></nav>
+    <nav className="flex flex-wrap items-center justify-between gap-3 bg-slate-900 p-4 text-slate-100"><span>{identity.username} · {identity.role}</span><div className="flex flex-wrap items-center gap-2"><GuidedTour role="participant" /><button className="button-secondary" disabled={busy} onClick={() => void logout()}>Sign out</button></div></nav>
     {message && <p role="alert" className="p-4 text-rose-500">{message}</p>}
-    {identity.role === "admin" ? <AdminDashboard token={identity.token} /> : assignment ? <FounderSubmissionForm sessionId={assignment.session_id} partyId={String(assignment.party_id)} accountCapability={assignment.capability} /> : <p className="p-6">No active assignment.</p>}
-    {identity.role === "admin" && <div className="mx-auto max-w-5xl px-6 pb-10"><ProtocolWalkthrough /></div>}
+    {assignment ? <FounderSubmissionForm sessionId={assignment.session_id} partyId={String(assignment.party_id)} accountCapability={assignment.capability} /> : <p className="p-6">No active assignment.</p>}
   </>;
   return (
     <AuthGateway

@@ -1,41 +1,27 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
-  CheckCircle2,
-  Copy,
-  ExternalLink,
-  Play,
-  Plus,
-  RefreshCw,
-  Server,
-  ShieldCheck,
-  Users,
-  ArrowUpRight,
-  Activity,
-  RadioTower,
-  Terminal,
-  Clock3,
-  RotateCcw,
+  ArrowRight, Check, ChevronRight, CircleAlert, ClipboardCopy,
+  LoaderCircle, LockKeyhole, Menu, Play, Plus, RefreshCw,
+  ShieldCheck, X,
 } from "lucide-react";
 import AccountInvite from "./AccountInvite";
+import { ProtocolWalkthrough } from "./LearningCenter";
 
-interface HealthData {
+type HealthData = {
   status: string;
   service: string;
   version: string;
   session_storage?: string;
-  mpc_configuration?: { parties: number; threshold: number; honest_majority: boolean };
-}
-
-interface FounderInvite {
+};
+type FounderInvite = {
   party_id: number;
   submission_page: string;
   submission_api: string;
   capability_token: string;
-}
-
-interface SessionData {
+};
+type SessionData = {
   session_id: string;
   state: string;
   created_at: string;
@@ -44,30 +30,117 @@ interface SessionData {
   result?: { aggregate_sum: number; average_salary: number } | null;
   failure_reason?: string | null;
   founder_invites?: FounderInvite[];
-}
+};
 
 const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "https://localhost:8000").replace(/\/+$/, "");
-const POLL_INTERVAL_MS = 4_000;
-const TERMINAL_STATES = new Set(["completed", "failed", "expired"]);
+const POLL_INTERVAL_MS = 4000;
+const FINISHED = new Set(["completed", "failed", "expired"]);
 const numberFormat = new Intl.NumberFormat("en-PK", { maximumFractionDigits: 2 });
+const PARTY_IDS = [0, 1, 2] as const;
+
+function ChamberScene({ submitted, stage }: { submitted: ReadonlySet<number>; stage: string }) {
+  const running = stage === "computing";
+  const finished = stage === "completed";
+  const armed = stage === "ready" || running || finished;
+  const engaged = submitted.size === 3;
+
+  return (
+    <div className={`ch-visual ch-visual--${stage}`}>
+      <svg className="ch-machine-svg" viewBox="0 0 1160 490" xmlns="http://www.w3.org/2000/svg" role="img" aria-label={`${submitted.size} of 3 founder capsules received. Machine ${finished ? "completed" : running ? "computing" : armed ? "ready" : "waiting"}.`}>
+        <defs>
+          <linearGradient id="ch-metal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#282329"/><stop offset=".5" stopColor="#100e13"/><stop offset="1" stopColor="#39282e"/></linearGradient>
+          <linearGradient id="ch-shell" x1="0" x2="1"><stop offset="0" stopColor="#251c23"/><stop offset=".5" stopColor="#4d3037"/><stop offset="1" stopColor="#1a141a"/></linearGradient>
+          <linearGradient id="ch-beam" x1="0" x2="1"><stop offset="0" stopColor="#ef2639" stopOpacity=".05"/><stop offset=".5" stopColor="#ef2639"/><stop offset="1" stopColor="#f6d9bc" stopOpacity=".05"/></linearGradient>
+          <radialGradient id="ch-core"><stop offset="0" stopColor="#ffe3c9"/><stop offset=".24" stopColor="#f35a5f"/><stop offset=".65" stopColor="#bd132a"/><stop offset="1" stopColor="#350d1b"/></radialGradient>
+          <filter id="ch-softglow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="8"/></filter>
+        </defs>
+
+        {/* Angular frame; deliberate negative space around the machine. */}
+        <path d="M16 34H315M16 34V126M1144 34H1000M1144 34V126M16 450H255M16 450V404M1144 450H1000M1144 450V405" stroke="#7f626b" strokeWidth="1.5" fill="none" opacity=".52"/>
+        <path d="M25 245H115M1074 245H1135" stroke="#e83c4b" strokeWidth="2" opacity=".4"/>
+
+        {/* The three tracks remain visible in every state. */}
+        {PARTY_IDS.map((partyId) => {
+          const y = 121 + partyId * 126;
+          const received = submitted.has(partyId);
+          return (
+            <g key={partyId} className={`ch-track ${received ? "ch-track--received" : ""}`}>
+              <title>{`Partner ${partyId + 1}: ${received ? "submission received and sealed" : "awaiting submission"}`}</title>
+              <text x="49" y={y - 42} fill="#ad9198" fontSize="12" fontWeight="800" letterSpacing="2.6">PARTNER 0{partyId + 1}</text>
+              <text x="49" y={y + 50} fill={received ? "#f8dfce" : "#90767f"} fontSize="11" fontWeight="800" letterSpacing="2.2">{received ? "INPUT SECURED" : "AWAITING INPUT"}</text>
+              <path d={`M90 ${y - 20}H620M90 ${y + 20}H620`} stroke="#65515a" strokeWidth="2" opacity=".58"/>
+              <path d={`M265 ${y}H598`} stroke={received ? "#f54557" : "#5a3e49"} strokeWidth="3" strokeDasharray="8 14" className={received ? "ch-track-energy" : ""}/>
+              {[311, 395, 479, 563].map((x) => <path key={x} d={`M${x} ${y-26}v52`} stroke="#70505d" strokeOpacity=".35"/>) }
+
+              {/* The seal and transport animation is triggered only by confirmed submissions. */}
+              <g transform={`translate(109 ${y})`}>
+                <g className={received ? "ch-capsule ch-capsule--sent" : "ch-capsule ch-capsule--waiting"}>
+                  <rect x="-37" y="-22" width="154" height="44" rx="21" fill="url(#ch-shell)" stroke={received ? "#ff6f73" : "#bc8a89"} strokeWidth="2"/>
+                  <rect x="-28" y="-14" width="124" height="28" rx="13" fill="#0b0a0c" stroke="#7e666c" strokeWidth="1"/>
+                  <rect x="58" y="-13" width="32" height="26" rx="6" fill={received ? "#f42a43" : "#69434d"}/>
+                  <path d="M-17 -20v40M-4 -20v40" stroke="#f0d6c7" strokeOpacity=".34" strokeWidth="2"/>
+                  <path d="M-9 0H45" stroke={received ? "#f33a4d" : "#b88b8d"} strokeWidth="3"/>
+                  <path d="M101 -9h4l7 9-7 9h-4" fill="none" stroke="#f3d2bb" strokeWidth="2"/>
+                  <text x="21" y="-6" textAnchor="middle" fill="#eee0d5" fontSize="8" fontWeight="900" letterSpacing="1">SEALED INPUT</text>
+                </g>
+              </g>
+
+              {/* Filled port signifies confirmed delivery, not a visible salary. */}
+              <g className={`ch-port ${received ? "ch-port--received" : ""}`}>
+                <rect x="589" y={y - 31} width="110" height="62" rx="7" fill="#0a090e" stroke={received ? "#ee3649" : "#57414a"} strokeWidth="3"/>
+                <rect x="601" y={y - 18} width="78" height="36" rx="14" fill={received ? "#8d182a" : "#181018"} stroke={received ? "#f67a7f" : "#4e3b42"} strokeWidth="2"/>
+                <path d={`M695 ${y - 24}l17 -10v68l-17 -10`} fill="url(#ch-metal)" stroke="#82636c" strokeWidth="2"/>
+                {received && <g className="ch-port-lock"><rect x="630" y={y - 9} width="16" height="15" rx="2" fill="#ffe9d2"/><path d={`M634 ${y - 8}v-5a4 4 0 0 1 8 0v5`} fill="none" stroke="#ffe9d2" strokeWidth="3"/></g>}
+              </g>
+            </g>
+          );
+        })}
+
+        {/* Machine housing */}
+        <g className={`ch-machinery ${engaged ? "ch-machinery--loaded" : ""} ${armed ? "ch-machinery--armed" : ""} ${running ? "ch-machinery--running" : ""} ${finished ? "ch-machinery--finished" : ""}`}>
+          <path d="M720 45H1007L1090 137V345L1007 437H720L696 393V90Z" fill="url(#ch-metal)" stroke="#bd8d88" strokeWidth="3"/>
+          <path d="M739 66H996L1068 148V333L996 416H739L716 383V100Z" fill="#130f16" stroke="#6b505b" strokeWidth="2"/>
+          <path d="M746 80H979L1040 155V325L979 403H746" fill="none" stroke="#a37b79" strokeOpacity=".5" strokeWidth="2"/>
+          <path d="M732 105L767 130M732 375L767 350M1012 123L1047 94M1012 361L1047 391" stroke="#f34755" strokeOpacity=".5" strokeWidth="5"/>
+          <g className="ch-machine-rings" transform="translate(885 242)">
+            <circle r="132" fill="#09090d" stroke="#473039" strokeWidth="7"/>
+            <circle r="121" fill="none" stroke="#a88278" strokeOpacity=".48" strokeDasharray="7 19" strokeWidth="4"/>
+            <g className="ch-rotor"><circle r="105" fill="none" stroke="#f0444f" strokeWidth="5" strokeDasharray="120 33 40 79 35 112" opacity=".8"/><path d="M0 -105V-123M105 0h18M0 105v18M-105 0h-18" stroke="#fff0df" strokeWidth="5"/></g>
+            <g className="ch-rotor ch-rotor--reverse"><circle r="83" fill="none" stroke="#c6a8a0" strokeWidth="2" strokeDasharray="9 11"/><path d="M-62 -55H62L79 -28V28L62 55H-62L-79 28V-28Z" fill="none" stroke="#a58a87" strokeOpacity=".55" strokeWidth="3"/></g>
+            <circle className="ch-core-aura" r="62" fill="url(#ch-core)" opacity=".36" filter="url(#ch-softglow)"/>
+            <circle className="ch-core" r="58" fill={engaged ? "url(#ch-core)" : "#21151e"} stroke={engaged ? "#ffb0a4" : "#765a61"} strokeWidth="3"/>
+            <path d="M-22 -17L0 -38L22 -17V19L0 39L-22 19Z" fill="none" stroke={engaged ? "#fff4e0" : "#90787a"} strokeWidth="4"/>
+            <circle r="8" fill={engaged ? "#fff2de" : "#755c60"}/>
+          </g>
+          <g className="ch-shutters"><path d="M758 240L830 194V289L758 242Z" fill="#49343c" stroke="#e06b70" strokeWidth="2"/><path d="M1016 240L943 194V289L1016 242Z" fill="#49343c" stroke="#e06b70" strokeWidth="2"/></g>
+          <g className="ch-machine-lock"><path d="M802 83h165l-23 30H826Z" fill="#e52e42"/><path d="M802 401h165l-23 -30H826Z" fill="#e52e42"/></g>
+        </g>
+        <path d="M1042 229h75M1042 257h75" stroke="#a17a7f" strokeOpacity=".7" strokeWidth="2"/>
+        <path d="M1084 217l19 26-19 26" fill="none" stroke="#f04453" strokeWidth="3"/>
+      </svg>
+      <div className="ch-visual-hint" aria-hidden="true">SECURE MULTIPARTY COMPUTATION <span>///</span> THREE-PARTY CHAMBER</div>
+    </div>
+  );
+}
 
 export default function AdminDashboard({ token }: { token: string }) {
   const [health, setHealth] = useState<HealthData | null>(null);
-  const adminToken = token;
-  const [sessionLookupId, setSessionLookupId] = useState("");
-  const [session, setSession] = useState<SessionData | null>(null);
-  const [loading, setLoading] = useState(false);
   const [healthLoading, setHealthLoading] = useState(true);
+  const [session, setSession] = useState<SessionData | null>(null);
+  const [lookupId, setLookupId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [computePending, setComputePending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pollWarning, setPollWarning] = useState<string | null>(null);
-  const [copyNotice, setCopyNotice] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [resultOpen, setResultOpen] = useState(true);
+  const [copyMessage, setCopyMessage] = useState("");
+  const drawerRef = useRef<HTMLElement>(null);
+  const drawerButtonRef = useRef<HTMLButtonElement>(null);
 
   const requestHealth = useCallback(async (signal?: AbortSignal): Promise<HealthData> => {
     const response = await fetch(`${apiUrl}/health`, {
-      cache: "no-store",
-      credentials: "omit",
-      referrerPolicy: "no-referrer",
-      signal,
+      cache: "no-store", credentials: "omit", referrerPolicy: "no-referrer", signal,
     });
     if (!response.ok) throw new Error(`Backend returned HTTP ${response.status}`);
     return (await response.json()) as HealthData;
@@ -77,8 +150,10 @@ export default function AdminDashboard({ token }: { token: string }) {
     setHealthLoading(true);
     try {
       setHealth(await requestHealth());
+      setError(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not reach the backend");
+      setHealth(null);
+      setError(cause instanceof Error ? cause.message : "Backend is unreachable");
     } finally {
       setHealthLoading(false);
     }
@@ -86,289 +161,264 @@ export default function AdminDashboard({ token }: { token: string }) {
 
   useEffect(() => {
     const controller = new AbortController();
-
-    void requestHealth(controller.signal)
-      .then((data) => {
-        if (!controller.signal.aborted) setHealth(data);
-      })
-      .catch((cause: unknown) => {
-        if (!controller.signal.aborted) {
-          setError(cause instanceof Error ? cause.message : "Could not reach the backend");
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setHealthLoading(false);
-      });
-
+    void requestHealth(controller.signal).then((value) => {
+      if (!controller.signal.aborted) setHealth(value);
+    }).catch((cause: unknown) => {
+      if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Backend is unreachable");
+    }).finally(() => {
+      if (!controller.signal.aborted) setHealthLoading(false);
+    });
     return () => controller.abort();
   }, [requestHealth]);
 
-  const managementRequest = useCallback(
-    async (path: string, method: "GET" | "POST", body?: object) => {
-      if (!adminToken) throw new Error("Enter the coordinator management token first.");
-      const response = await fetch(`${apiUrl}/api/v1${path}`, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${adminToken}`,
-        },
-        body: body ? JSON.stringify(body) : undefined,
-        cache: "no-store",
-        credentials: "omit",
-        referrerPolicy: "no-referrer",
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(data.detail || `Request failed with HTTP ${response.status}`);
-      }
-      return data as SessionData;
-    },
-    [adminToken],
-  );
+  const managementRequest = useCallback(async (path: string, method: "GET" | "POST", body?: object): Promise<SessionData> => {
+    if (!token) throw new Error("Coordinator authentication required.");
+    const response = await fetch(`${apiUrl}/api/v1${path}`, {
+      method,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: body ? JSON.stringify(body) : undefined,
+      cache: "no-store", credentials: "omit", referrerPolicy: "no-referrer",
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || `Request failed (HTTP ${response.status})`);
+    return data as SessionData;
+  }, [token]);
 
-  async function createSession(event: FormEvent) {
-    event.preventDefault();
-    setLoading(true);
+  async function createSession(event?: FormEvent) {
+    event?.preventDefault();
+    if (busy) return;
+    setBusy(true);
     setError(null);
     setPollWarning(null);
-    setSession(null);
     try {
       const created = await managementRequest("/sessions", "POST", { ttl_minutes: 30 });
       setSession(created);
+      setResultOpen(true);
+      setDrawerOpen(true); // Invitations are the immediate next step.
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not create the session");
+      setError(cause instanceof Error ? cause.message : "Could not create session");
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   }
 
-  async function loadExistingSession(event: FormEvent) {
+  async function loadSession(event: FormEvent) {
     event.preventDefault();
-    const sessionId = sessionLookupId.trim();
-    if (!sessionId) return;
-    setLoading(true);
+    const sessionId = lookupId.trim();
+    if (!sessionId || busy) return;
+    setBusy(true);
     setError(null);
     setPollWarning(null);
     try {
       const loaded = await managementRequest(`/sessions/${encodeURIComponent(sessionId)}`, "GET");
       setSession(loaded);
+      setResultOpen(true);
+      setDrawerOpen(false);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not load the session");
+      setError(cause instanceof Error ? cause.message : "Could not load session");
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   }
 
+  const sessionId = session?.session_id;
+  const state = (session?.state || "idle").toLowerCase();
+
   const refreshSession = useCallback(async () => {
-    if (!session) return;
-    setLoading(true);
+    if (!sessionId || busy) return;
+    setBusy(true);
     setError(null);
     try {
-      const next = await managementRequest(`/sessions/${session.session_id}`, "GET");
-      setSession((current) =>
-        current ? { ...next, founder_invites: current.founder_invites } : current,
-      );
+      const next = await managementRequest(`/sessions/${encodeURIComponent(sessionId)}`, "GET");
+      setSession((current) => current && current.session_id === sessionId
+        ? { ...next, founder_invites: current.founder_invites } : current);
       setPollWarning(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not refresh the session");
+      setError(cause instanceof Error ? cause.message : "Could not refresh session");
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
-  }, [managementRequest, session]);
+  }, [busy, managementRequest, sessionId]);
 
-  const activeSessionId = session?.session_id;
-  const activeSessionState = session?.state.toLowerCase();
-
-  // Poll only the metadata endpoint. No founder salary is sent to this page or coordinator.
+  // Only status metadata is polled. Individual salary values never enter this component.
   useEffect(() => {
-    const sessionId = activeSessionId;
-    if (!sessionId || !activeSessionState || TERMINAL_STATES.has(activeSessionState) || !adminToken) return;
-
+    if (!sessionId || FINISHED.has(state) || !token) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
-
-    const poll = async () => {
+    async function poll() {
       try {
-        const next = await managementRequest(`/sessions/${sessionId}`, "GET");
+        const next = await managementRequest(`/sessions/${encodeURIComponent(sessionId as string)}`, "GET");
         if (!cancelled) {
-          setSession((current) =>
-            current && current.session_id === sessionId
-              ? { ...next, founder_invites: current.founder_invites }
-              : current,
-          );
+          setSession((current) => current && current.session_id === sessionId
+            ? { ...next, founder_invites: current.founder_invites } : current);
           setPollWarning(null);
         }
       } catch (cause) {
-        if (!cancelled) {
-          setPollWarning(
-            cause instanceof Error ? cause.message : "Automatic status refresh is temporarily unavailable.",
-          );
-        }
+        if (!cancelled) setPollWarning(cause instanceof Error ? cause.message : "Auto-refresh unavailable");
       } finally {
         if (!cancelled) timer = setTimeout(poll, POLL_INTERVAL_MS);
       }
-    };
-
-    timer = setTimeout(poll, POLL_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [activeSessionId, activeSessionState, adminToken, managementRequest]);
-
-  async function computeSession() {
-    if (!session || session.state.toLowerCase() !== "ready" || session.submitted_party_ids.length !== 3) {
-      return;
     }
-    setLoading(true);
+    timer = setTimeout(poll, POLL_INTERVAL_MS);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [sessionId, state, token, managementRequest]);
+
+  const submitted = new Set(session?.submitted_party_ids ?? []);
+  const submittedCount = submitted.size;
+  const canCompute = state === "ready" && submittedCount === 3 && !busy && !computePending;
+  const isComputing = computePending || state === "computing";
+  const complete = state === "completed" && Boolean(session?.result);
+  const isConnected = health?.status.toLowerCase() === "ok";
+  const fault = state === "failed" || state === "expired";
+
+  async function compute() {
+    if (!sessionId || !canCompute) return;
+    setBusy(true);
+    setComputePending(true);
     setError(null);
     try {
-      const next = await managementRequest(`/sessions/${session.session_id}/compute`, "POST");
-      setSession({ ...next, founder_invites: session.founder_invites });
+      const next = await managementRequest(`/sessions/${encodeURIComponent(sessionId)}/compute`, "POST");
+      setSession((current) => current ? { ...next, founder_invites: current.founder_invites } : next);
+      setResultOpen(true);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Computation could not start");
     } finally {
-      setLoading(false);
+      setComputePending(false);
+      setBusy(false);
     }
   }
 
-  async function copyValue(value: string, label: string) {
+  async function copyId() {
+    if (!sessionId) return;
     try {
-      await navigator.clipboard.writeText(value);
-      setCopyNotice(`${label} copied.`);
-      window.setTimeout(() => setCopyNotice(null), 2500);
+      await navigator.clipboard.writeText(sessionId);
+      setCopyMessage("Session ID copied");
     } catch {
-      setCopyNotice("Clipboard access is unavailable. Copy the value from its link instead.");
+      setCopyMessage("Clipboard unavailable — select the session ID to copy it");
     }
   }
 
-  const submitted = new Set(session?.submitted_party_ids ?? []);
-  const canCompute = Boolean(
-    session && session.state.toLowerCase() === "ready" && session.submitted_party_ids.length === 3,
-  );
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const oldOverflow = document.body.style.overflow;
+    const opener = drawerButtonRef.current;
+    document.body.style.overflow = "hidden";
+    drawerRef.current?.focus();
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setDrawerOpen(false);
+      if (event.key !== "Tab" || !drawerRef.current) return;
+      const elements = Array.from(drawerRef.current.querySelectorAll<HTMLElement>(
+        'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
+      )).filter((element) => element.getClientRects().length > 0);
+      if (!elements.length) return;
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === drawerRef.current)) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = oldOverflow;
+      window.removeEventListener("keydown", onKey);
+      opener?.focus();
+    };
+  }, [drawerOpen]);
 
-  const status = session?.state.toLowerCase() || "standby";
-  const isConnected = Boolean(health && health.status.toLowerCase() === "ok");
-  const submittedCount = session?.submitted_party_ids.length ?? 0;
-  const progress = Math.min(100, Math.round((submittedCount / 3) * 100));
+  const headline = complete ? "AGGREGATE COMPLETE" :
+    isComputing ? "SECURE COMPUTATION IN PROGRESS" :
+    fault ? (state === "expired" ? "SESSION EXPIRED" : "CHAMBER ERROR") :
+    !session ? "AWAITING INITIALIZATION" :
+    state === "ready" && submittedCount === 3 ? "ALL CAPSULES SECURED" :
+    `${submittedCount} OF 3 INPUTS SECURED`;
 
   return (
-    <main className="mc-root">
-      <div className="mc-background-grid" aria-hidden="true" />
-      <div className="mc-shell">
-        <header className="mc-topline">
-          <div className="mc-identity">
-            <span className="mc-emblem" aria-hidden="true">V<span>◆</span></span>
-            <div>
-              <span className="mc-brand">VEILBENCH</span>
-              <span className="mc-brand-sub">OPERATIONS / COORDINATOR</span>
-            </div>
+    <main className={`ch-root ch-state-${state} ${isComputing ? "ch-is-computing" : ""}`}>
+      <div className="ch-ambient" aria-hidden="true" />
+      <div className="ch-inner">
+        <header className="ch-header">
+          <div className="ch-heading">
+            <span className="ch-kicker">OPERATION 02 <b>/</b> THREE-PARTY MPC</span>
+            <h1>THE <em>CHAMBER.</em></h1>
           </div>
-          <div className="mc-top-right">
-            <span className="mc-environment"><span className={`mc-dot ${isConnected ? "mc-dot-live" : ""}`} /> {healthLoading ? "CONNECTING" : isConnected ? "SYSTEM ONLINE" : "STATUS UNAVAILABLE"}</span>
-            <span className="mc-top-index">CONTROL DECK — 01</span>
+          <div className="ch-header-tools">
+            <div className={`ch-connection ${isConnected ? "ch-connection--online" : ""}`} role="status">
+              <span /> {healthLoading ? "CONNECTING" : isConnected ? "LINK ACTIVE" : "LINK UNVERIFIED"}
+            </div>
+            <button type="button" className="ch-tool-button" ref={drawerButtonRef} onClick={() => setDrawerOpen(true)} aria-expanded={drawerOpen} aria-controls="ch-drawer" aria-label="Open session controls">
+              <Menu size={18} aria-hidden="true" /> <span>SESSION TOOLS</span>
+            </button>
           </div>
         </header>
 
-        <div className="mc-headline-row">
-          <div>
-            <div className="mc-eyebrow"><span className="mc-rule" /> LIVE OPERATIONS / PRIVATE BENCHMARK</div>
-            <h1 className="mc-title">MISSION <em>CONTROL.</em></h1>
-            <p className="mc-intro">Three private inputs. One collective result. All the coordination you need, nothing you shouldn’t see.</p>
-          </div>
-          <div className="mc-system-flag" aria-hidden="true"><span>03</span><small>PARTY<br/>PROTOCOL</small></div>
-        </div>
-
-        <div className="mc-command-grid">
-          <section className="mc-radar-panel" aria-labelledby="mc-radar-heading">
-            <div className="mc-panel-top">
-              <span className="mc-panel-label"><Activity size={15} /> LIVE SESSION MONITOR</span>
-              <span className="mc-panel-code">MON / 001</span>
+        <section className="ch-stage" aria-label="Secure three-party submission chamber">
+          <ChamberScene submitted={submitted} stage={isComputing ? "computing" : state} />
+          <div className="ch-stage-counter" aria-hidden="true"><span>{String(submittedCount).padStart(2, "0")}</span><small>/ 03</small></div>
+          {complete && resultOpen && session?.result && (
+            <div className="ch-result" role="region" aria-label="Computed aggregate results">
+              <div className="ch-result-head"><span>OUTPUT RELEASED</span><button type="button" onClick={() => setResultOpen(false)} aria-label="Hide result panel"><X size={16}/></button></div>
+              <div className="ch-result-title">COLLECTIVE <em>INSIGHT.</em></div>
+              <div className="ch-result-data"><div><small>AGGREGATE SUM</small><strong>{numberFormat.format(session.result.aggregate_sum)}</strong></div><div><small>AVERAGE SALARY</small><strong>{numberFormat.format(session.result.average_salary)}</strong></div></div>
+              <p>Only aggregate statistics are published.</p>
             </div>
-            <div className="mc-radar-wrap">
-              <svg className="mc-radar" viewBox="0 0 460 320" role="img" aria-label={`Three party signal monitor: ${submittedCount} of 3 submissions received`}>
-                <defs>
-                  <linearGradient id="mc-scan" x1="0" x2="1"><stop offset="0" stopColor="#f53b44" stopOpacity="0" /><stop offset="1" stopColor="#f53b44" stopOpacity=".32" /></linearGradient>
-                </defs>
-                <g className="mc-radar-center" transform="translate(230 161)">
-                  {[45,76,111,145].map(r => <circle key={r} r={r} fill="none" stroke="#f2e6d3" strokeOpacity={r===145?".14":".1"} strokeWidth="1" strokeDasharray={r===145?"3 8":"none"} />)}
-                  <path d="M-160 0H160M0 -154V154" stroke="#f2e6d3" strokeOpacity=".11" />
-                  <path d="M0 0 L0 -145 A145 145 0 0 1 145 0 Z" fill="url(#mc-scan)" className="mc-radar-sweep" />
-                  {([[-104,65],[0,-110],[104,65]] as const).map(([x,y],i) => {
-                    const received = submitted.has(i);
-                    return <g key={i} transform={`translate(${x} ${y})`}>
-                      <circle r="26" fill={received?"#ef2538":"#171519"} stroke={received?"#ef2538":"#6b5f60"} strokeWidth="2" />
-                      <circle r="32" fill="none" stroke={received?"#ef2538":"#8f8280"} strokeOpacity=".42" strokeDasharray="3 5" className={received ? "mc-radar-pulse" : ""}/>
-                      <text y="6" textAnchor="middle" fill={received?"#fff":"#d9cbc2"} fontSize="17" fontWeight="900">{String(i+1).padStart(2,"0")}</text>
-                    </g>;
-                  })}
-                  <circle r="9" fill="#f3e9dd" />
-                  <circle r="3" fill="#e50922" />
-                </g>
-              </svg>
-              <div className="mc-radar-center-copy"><strong>{submittedCount}<span>/03</span></strong><small>SIGNALS RECEIVED</small></div>
-            </div>
-            <div className="mc-radar-footer">
-              <span><span className="mc-live-pulse" /> AUTO-SYNC / 4 SEC</span>
-              <span>{session ? `SESSION ${session.session_id.slice(0,8).toUpperCase()}` : "AWAITING SESSION"}</span>
-            </div>
-          </section>
-
-          <div className="mc-right-column">
-            <section className="mc-status-panel" aria-labelledby="mc-status-heading">
-              <div className="mc-panel-top"><span className="mc-panel-label"><RadioTower size={15} /> NETWORK STATUS</span><span className="mc-panel-code">SYS / 002</span></div>
-              <div className="mc-status-main">
-                <div><span className="mc-small-label" id="mc-status-heading">COORDINATOR LINK</span><strong>{healthLoading ? "CHECKING" : health ? health.status.toUpperCase() : "UNAVAILABLE"}</strong><small>{health ? `${health.service} · v${health.version}` : "Connection not verified"}</small></div>
-                <div className={`mc-status-symbol ${isConnected?"mc-status-symbol-live":""}`} aria-hidden="true"><Server size={34}/></div>
-              </div>
-              <div className="mc-status-footer"><span>STORAGE / {health?.session_storage || "UNKNOWN"}</span><button type="button" onClick={() => void checkHealth()} disabled={healthLoading}><RefreshCw size={14}/> RECHECK</button></div>
-            </section>
-
-            <section className="mc-operations" aria-labelledby="mc-ops-heading">
-              <div className="mc-panel-top"><span className="mc-panel-label"><Terminal size={15}/> SESSION COMMANDS</span><span className="mc-panel-code">OPS / 003</span></div>
-              <h2 id="mc-ops-heading">INITIATE <em>BENCHMARK</em></h2>
-              <p>Start a new three-party round or retrieve an existing session.</p>
-              <form onSubmit={createSession}>
-                <button className="mc-command-primary" type="submit" disabled={loading || !adminToken.trim()}><Plus size={19}/> CREATE 30-MIN SESSION <ArrowUpRight size={18}/></button>
-              </form>
-              <form className="mc-retrieve" onSubmit={loadExistingSession}>
-                <label htmlFor="mc-session-lookup">RETRIEVE EXISTING SESSION</label>
-                <div className="mc-retrieve-row"><input id="mc-session-lookup" type="text" autoComplete="off" placeholder="Paste session ID" value={sessionLookupId} onChange={event => setSessionLookupId(event.target.value)} /><button type="submit" disabled={loading || !adminToken.trim() || !sessionLookupId.trim()} aria-label="Load existing session"><ArrowUpRight size={20}/></button></div>
-              </form>
-            </section>
-          </div>
-        </div>
-
-        {error && <p role="alert" className="mc-alert">{error}</p>}
-        {pollWarning && <p role="status" className="mc-warning">Status refresh warning: {pollWarning}</p>}
-
-        <section className="mc-flow" aria-labelledby="mc-flow-heading">
-          <div className="mc-flow-header"><div><span className="mc-eyebrow">OPERATION / 02</span><h2 id="mc-flow-heading">THE <em>PROTOCOL.</em></h2></div><span className="mc-flow-caption">SECURE MULTIPARTY COMPUTATION</span></div>
-          <div className="mc-flow-steps">
-            <div className="mc-flow-step"><span className="mc-step-number">01</span><strong>INITIALIZE</strong><small>{session ? "SESSION CREATED" : "AWAITING LAUNCH"}</small></div>
-            <span className="mc-flow-connector" aria-hidden="true" />
-            <div className="mc-flow-step"><span className="mc-step-number">02</span><strong>COLLECT</strong><small>{submittedCount} OF 3 RECEIVED</small></div>
-            <span className="mc-flow-connector" aria-hidden="true" />
-            <div className="mc-flow-step"><span className="mc-step-number">03</span><strong>COMPUTE</strong><small>{session?.result ? "COMPLETE" : status === "computing" ? "IN PROGRESS" : "PENDING"}</small></div>
-          </div>
-          <div className="mc-progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={3} aria-valuenow={submittedCount} aria-label="Founder submissions received"><span style={{width:`${progress}%`}}/></div>
+          )}
         </section>
 
-        {session && <section className="mc-active" aria-labelledby="mc-active-heading">
-          <div className="mc-section-title"><div><span className="mc-eyebrow">ACTIVE OPERATION / 03</span><h2 id="mc-active-heading">SESSION <em>DETAILS.</em></h2></div><span className={`mc-state mc-state-${status}`}>{session.state}</span></div>
-          <div className="mc-session-bar"><div><span className="mc-small-label">SESSION IDENTIFIER</span><code>{session.session_id}</code></div><div><span className="mc-small-label">EXPIRATION</span><span><Clock3 size={14}/> {new Date(session.expires_at).toLocaleString()}</span></div></div>
-          <div className="mc-party-grid">
-            {[0,1,2].map(partyId => <div className={`mc-party ${submitted.has(partyId)?"mc-party-ready":""}`} key={partyId}><span className="mc-party-index">0{partyId+1}</span><div><strong>FOUNDER {partyId+1}</strong><span>{submitted.has(partyId)?"INPUT RECEIVED":"AWAITING INPUT"}</span></div>{submitted.has(partyId)?<CheckCircle2 size={23}/>:<span className="mc-waiting-ring"/>}</div>)}
+        <div className="ch-console">
+          <div className="ch-console-status" role="status" aria-live="polite">
+            <div className={`ch-status-light ${complete ? "ch-status-light--complete" : ""} ${isComputing ? "ch-status-light--running" : ""}`} />
+            <div><span className="ch-status-index">CHAMBER STATUS</span><strong>{headline}</strong></div>
           </div>
-          <div className="mc-session-actions"><button type="button" className="mc-action-secondary" onClick={() => void refreshSession()} disabled={loading}><RotateCcw size={16}/> CHECK STATUS</button><button type="button" className="mc-action-compute" onClick={() => void computeSession()} disabled={loading || !canCompute}><Play size={17}/> COMPUTE AGGREGATE <ArrowUpRight size={18}/></button></div>
-          <p className="mc-note">Individual salaries are never shown in this dashboard. Computation becomes available after all three submissions are confirmed.</p>
-
-          {session.founder_invites && status !== "completed" && <div className="mc-invites"><div className="mc-invite-heading"><span className="mc-eyebrow">SECURE DISTRIBUTION / 04</span><h3>PRIVATE INVITATIONS</h3><p>Share each account invitation privately. Participants activate their account and choose a password before signing in.</p></div><div className="mc-invite-grid">{session.founder_invites.map(invite => <article key={invite.party_id} className="mc-invite"><div className="mc-invite-label"><Users size={17}/> FOUNDER {invite.party_id+1}</div><a href="/" target="_blank" rel="noreferrer">OPEN SIGN-IN <ExternalLink size={14}/></a><button type="button" className="mc-action-secondary" onClick={() => void copyValue(window.location.origin, `Founder ${invite.party_id+1} sign-in link`)}><Copy size={15}/> COPY LINK</button><AccountInvite key={`${session.session_id}-${invite.party_id}`} token={token} sessionId={session.session_id} partyId={invite.party_id}/></article>)}</div>{copyNotice && <p role="status" className="mc-copy-notice">{copyNotice}</p>}</div>}
-          {session.result && <section className="mc-results" aria-labelledby="mc-result-title"><span className="mc-eyebrow">COMPUTATION COMPLETE / FINAL REVEAL</span><h3 id="mc-result-title">COLLECTIVE <em>INSIGHT.</em></h3><div className="mc-result-grid"><div><span>AGGREGATE SALARY</span><strong>{numberFormat.format(session.result.aggregate_sum)}</strong></div><div><span>AVERAGE SALARY</span><strong>{numberFormat.format(session.result.average_salary)}</strong></div></div><p>Aggregate statistics only. No individual salary values are disclosed here.</p></section>}
-          {session.failure_reason && <p role="alert" className="mc-alert">{session.failure_reason}</p>}
-        </section>}
-        <footer className="mc-footer"><span>VEILBENCH / MISSION CONTROL</span><span>SECURE SESSION MANAGEMENT · THREE-PARTY MPC</span><ShieldCheck size={17}/></footer>
+          <div className="ch-command-group">
+            {session && <button type="button" className="ch-refresh" onClick={() => void refreshSession()} disabled={busy} title="Refresh live submission status" aria-label="Refresh submission status"><RefreshCw size={18} aria-hidden="true" /></button>}
+            {!session ? (
+              <button type="button" className="ch-main-action" disabled={busy} onClick={() => void createSession()}>{busy ? <LoaderCircle className="ch-spin"/> : <Plus/>} INITIALIZE SESSION <ArrowRight aria-hidden="true"/></button>
+            ) : canCompute ? (
+              <button type="button" className="ch-main-action" onClick={() => void compute()}><Play size={17} fill="currentColor"/> ENGAGE COMPUTATION <ArrowRight aria-hidden="true"/></button>
+            ) : complete ? (
+              <button type="button" className="ch-main-action ch-main-action--ivory" onClick={() => setResultOpen((value) => !value)}><Check size={17}/> {resultOpen ? "RESULT REVEALED" : "REVEAL RESULT"} <ChevronRight aria-hidden="true"/></button>
+            ) : fault ? (
+              <button type="button" className="ch-main-action" onClick={() => setDrawerOpen(true)}><CircleAlert size={17}/> SESSION OPTIONS <ArrowRight aria-hidden="true"/></button>
+            ) : (
+              <button type="button" className="ch-main-action" disabled><LockKeyhole size={17}/> {isComputing ? "COMPUTING…" : "WAITING FOR CAPSULES"}</button>
+            )}
+          </div>
+        </div>
+        {(error || pollWarning || session?.failure_reason) && <div className="ch-messages">
+          {error && <p role="alert" className="ch-error">{error}</p>}
+          {session?.failure_reason && <p role="alert" className="ch-error">{session.failure_reason}</p>}
+          {pollWarning && <p role="status" className="ch-warning">Sync warning: {pollWarning}</p>}
+        </div>}
+        <p className="ch-privacy-note"><ShieldCheck size={13} aria-hidden="true"/> Capsule transfer is a visual representation of submission status; the coordinator never receives an individual salary.</p>
       </div>
+
+      {drawerOpen && <div className="ch-drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setDrawerOpen(false); }}>
+        <section className="ch-drawer" id="ch-drawer" ref={drawerRef} role="dialog" aria-modal="true" aria-label="Session management tools" tabIndex={-1}>
+          <header className="ch-drawer-head"><div><small>VEILBENCH / ADMIN</small><h2>SESSION <em>TOOLS.</em></h2></div><button type="button" onClick={() => setDrawerOpen(false)} aria-label="Close session tools"><X size={22}/></button></header>
+          <div className="ch-drawer-scroll">
+            <section className="ch-tool-section">
+              <div className="ch-tool-heading"><span>01</span><h3>MANAGE SESSION</h3></div>
+              <button type="button" className="ch-drawer-action" onClick={() => void createSession()} disabled={busy}><Plus size={16}/> CREATE NEW 30-MIN SESSION</button>
+              <form onSubmit={loadSession} className="ch-load-form"><label htmlFor="ch-session-id-lookup">LOAD EXISTING SESSION</label><div><input id="ch-session-id-lookup" value={lookupId} onChange={(event) => setLookupId(event.target.value)} placeholder="Session ID" autoComplete="off"/><button type="submit" aria-label="Load session" disabled={!lookupId.trim() || busy}><ArrowRight size={17}/></button></div></form>
+              {session && <div className="ch-session-meta"><small>CURRENT SESSION</small><div><code>{session.session_id}</code><button type="button" onClick={() => void copyId()} aria-label="Copy session ID"><ClipboardCopy size={16}/></button></div><small>EXPIRES: {new Date(session.expires_at).toLocaleString()}</small><small>STATE: {session.state.toUpperCase()}</small>{copyMessage && <p role="status">{copyMessage}</p>}</div>}
+            </section>
+            <section className="ch-tool-section">
+              <div className="ch-tool-heading"><span>02</span><h3>CONNECTION</h3></div>
+              <p>{health ? `${health.service} · v${health.version}` : "Backend connection not verified"}</p><p>Storage: {health?.session_storage || "unknown"}</p>
+              <button type="button" className="ch-drawer-action ch-drawer-action--subtle" onClick={() => void checkHealth()} disabled={healthLoading}><RefreshCw size={16}/> RECHECK CONNECTION</button>
+            </section>
+            {session && !FINISHED.has(state) && <section className="ch-tool-section">
+              <div className="ch-tool-heading"><span>03</span><h3>PRIVATE INVITATIONS</h3></div>
+              <p>Issue one separate account invitation per founder. Send credentials privately, never in a public channel.</p>
+              {PARTY_IDS.map((partyId) => <div key={`${session.session_id}-${partyId}`} className="ch-invite-card"><h4>FOUNDER 0{partyId + 1}</h4><AccountInvite token={token} sessionId={session.session_id} partyId={partyId}/></div>)}
+            </section>}
+            <section className="ch-tool-section">
+              <div className="ch-tool-heading"><span>04</span><h3>PROTOCOL EXPLAINER</h3></div>
+              <details className="ch-drawer-guide"><summary>HOW THE THREE-PARTY COMPUTATION WORKS</summary><div><ProtocolWalkthrough /></div></details>
+            </section>
+          </div>
+          <div className="ch-drawer-foot"><span><LockKeyhole size={13}/> NO INDIVIDUAL SALARIES SHOWN</span></div>
+        </section>
+      </div>}
     </main>
   );
 }
