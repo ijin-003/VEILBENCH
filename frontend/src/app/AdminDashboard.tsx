@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import AccountInvite from "./AccountInvite";
 import ReactorStage from "./ReactorStage";
+import ApprovedResultArt from "./ApprovedResultArt";
 import "./approved-board.css";
 import { ProtocolWalkthrough } from "./LearningCenter";
 
@@ -253,7 +254,7 @@ export default function AdminDashboard({ token }: { token: string }) {
       <div className="r4-reactor-layout">
         <header className="r4-reactor-head">
           <div>
-            <span className="r4-kicker">THREE-FOUNDER SECURE COMPUTATION / 03</span>
+            <span className="r4-kicker">THREE-FOUNDER / SECURE COMPUTATION</span>
             <h1>MPC <em>REACTOR.</em></h1>
           </div>
           <div className="r4-reactor-actions">
@@ -280,7 +281,7 @@ export default function AdminDashboard({ token }: { token: string }) {
             {!session ? (
               <button type="button" className="r4-primary" disabled={busy} onClick={() => void createSession()}>{busy ? <LoaderCircle size={18} className="ch-spin"/> : <Plus size={18}/>} CREATE SESSION <ArrowRight size={18}/></button>
             ) : canCompute ? (
-              <button type="button" className="r4-primary" onClick={() => void compute()}><Play size={17}/> ENGAGE COMPUTATION <ArrowRight size={18}/></button>
+              <button type="button" className="r4-primary" onClick={() => void compute()}><Play size={17}/> COMPUTE <ArrowRight size={18}/></button>
             ) : complete ? (
               <button type="button" className="r4-primary r4-primary--light" onClick={() => setResultOpen(value => !value)}><Check size={17}/>{resultOpen ? "HIDE RESULT" : "REVEAL RESULT"}<ChevronRight size={18}/></button>
             ) : fault ? (
@@ -293,11 +294,7 @@ export default function AdminDashboard({ token }: { token: string }) {
 
         {complete && resultOpen && session?.result && (
           <section className="r4-results vb-board-results" aria-label="Computed aggregate results" aria-live="polite">
-            <div className="vb-board-results-art" aria-hidden="true">
-              <div className="vb-board-results-silhouettes">
-                <span>01 / SECURED</span><span>02 / SECURED</span><span>03 / SECURED</span>
-              </div>
-            </div>
+            <div className="vb-board-results-art" aria-hidden="true"><ApprovedResultArt /></div>
             <div className="vb-board-results-data">
               <h2>COMPUTATION COMPLETE.</h2>
               <p>AGGREGATE RESULTS ONLY</p>
