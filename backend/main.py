@@ -8,6 +8,7 @@ from backend.api.accounts import router as accounts_router
 from backend.api.sessions import router as sessions_router
 from backend.config import settings
 from backend.services.database import database
+from backend.security.http_security import api_docs_enabled
 
 
 @asynccontextmanager
@@ -23,13 +24,15 @@ async def lifespan(_: FastAPI):
     finally:
         await database.stop()
 
+_docs_enabled = api_docs_enabled(settings.ENVIRONMENT)
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     description="Privacy-Preserving Startup Founder Salary Benchmarking System using MPyC",
-    docs_url=None if settings.ENVIRONMENT.lower() == "production" else "/docs",
-    redoc_url=None if settings.ENVIRONMENT.lower() == "production" else "/redoc",
-    openapi_url=None if settings.ENVIRONMENT.lower() == "production" else "/openapi.json",
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
+    openapi_url="/openapi.json" if _docs_enabled else None,
     lifespan=lifespan,
 )
 
@@ -57,5 +60,5 @@ async def root():
         "version": settings.VERSION,
         "status": "operational",
         "description": "Secure Multiparty Computation (SMC) Engine",
-        "docs": None if settings.ENVIRONMENT.lower() == "production" else "/docs"
+        "docs": "/docs" if _docs_enabled else None
     }
