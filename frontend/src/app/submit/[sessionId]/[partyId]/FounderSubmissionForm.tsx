@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { ArrowRight, Check, CircleAlert, LockKeyhole, ShieldCheck } from "lucide-react";
+import "../../../approved-board.css";
 
 const partyUrls: Record<string, string | undefined> = {
   "0": process.env.NEXT_PUBLIC_PARTY_0_URL,
@@ -111,8 +112,8 @@ export default function FounderSubmissionForm({ sessionId, partyId, accountCapab
         <div className="d4-work-top">PARTY {validParty ? String(Number(partyId) + 1).padStart(2, "0") : "—"} <span>DIRECT MPC CHANNEL</span></div>
         <div className="d4-work-content">
           <span className="d4-kicker">01 / PRIVATE INPUT</span>
-          <h1>MAKE IT <em>PRIVATE.</em></h1>
-          <p className="d4-intro">One submission. Sent directly to your assigned MPC party—not the coordinator.</p>
+          <h1>SUBMIT YOUR <em>SALARY.</em></h1>
+          <p className="d4-intro">YOUR VALUE REMAINS PRIVATE. ONE DIRECT SUBMISSION TO YOUR ASSIGNED MPC PARTY.</p>
           {!validParty ? (
             <div className="d4-alert" role="alert"><CircleAlert size={18}/> Invalid party assignment. Contact the administrator.</div>
           ) : submitted ? (
