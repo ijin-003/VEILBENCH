@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { ArrowRight, Check, CircleAlert, LockKeyhole, ShieldCheck } from "lucide-react";
+import "../../../approved-board.css";
 
 const partyUrls: Record<string, string | undefined> = {
   "0": process.env.NEXT_PUBLIC_PARTY_0_URL,
@@ -10,32 +11,58 @@ const partyUrls: Record<string, string | undefined> = {
 };
 
 /** Static art only; it never receives, draws, or stores the salary. */
-function PrivateMark({ active, sending, sealed, partyId }: {
+export function PrivateMark({ active, sending, sealed, partyId }: {
   active: boolean;
   sending: boolean;
   sealed: boolean;
   partyId: string;
 }) {
   return (
-    <div className={`d4-mark ${active ? "d4-mark--active" : ""} ${sending ? "d4-mark--sending" : ""} ${sealed ? "d4-mark--sealed" : ""}`}>
-      <svg viewBox="0 0 500 480" role="img" aria-label={sealed ? "Private input accepted by the assigned MPC party" : sending ? "Transmitting to the assigned MPC party" : "Private input seal, awaiting submission"}>
-        <path className="d4-mark-wedge" d="M0 48L500 0V138L148 480H0Z" />
-        <path className="d4-mark-black" d="M345 0H500V480H417L233 284Z" />
-        <g className="d4-mark-orbit">
-          <circle cx="247" cy="244" r="143" className="d4-mark-circle"/>
-          <path d="M247 95v35M247 358v35M98 244h35M361 244h35" className="d4-mark-index" />
+    <div className={`d4-mark vb-ref-private-mark ${active ? "d4-mark--active" : ""} ${sending ? "d4-mark--sending" : ""} ${sealed ? "d4-mark--sealed" : ""}`}>
+      <svg viewBox="0 0 570 715" role="img" aria-label={sealed ? "Private input accepted and sealed" : sending ? "Sending to assigned MPC party" : "Anonymous founder inside protected input vessel"}>
+        <defs>
+          <linearGradient id="vb-private-steel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#fff7e5"/><stop offset=".25" stopColor="#c8a89d"/><stop offset=".53" stopColor="#fff9ed"/><stop offset=".78" stopColor="#a8a5a2"/><stop offset="1" stopColor="#201316"/>
+          </linearGradient>
+          <linearGradient id="vb-private-glass" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#8b0c19"/><stop offset=".5" stopColor="#fa2138"/><stop offset="1" stopColor="#6b0918"/>
+          </linearGradient>
+        </defs>
+        <path d="M0 160 370 0H570V715H0Z" fill="#e90e24" opacity=".3"/>
+        <path d="M64 111V611Q68 692 284 702Q501 685 506 613V110Q487 44 287 40Q86 48 64 111Z" fill="#111010" stroke="#111" strokeWidth="15"/>
+        <path d="M105 128V610Q115 661 288 665Q461 657 465 610V128Q461 82 289 86Q114 88 105 128Z" fill="url(#vb-private-glass)" stroke="#ffedd8" strokeWidth="13"/>
+        <path d="M129 167V578" fill="none" stroke="#fff6e6" strokeWidth="12" opacity=".64"/>
+        <path d="M440 163V575" fill="none" stroke="#ffd0c7" strokeWidth="8" opacity=".55"/>
+        {/* Anonymous founder silhouette, with sharp comic hair and a clean neck/shoulder line. */}
+        <path d="M186 491Q173 449 192 416L173 383 192 346 181 320 205 328 212 294 231 303 247 271 263 288 289 275 301 293 321 283 322 316 350 312 340 337 364 350 341 365 354 390 340 418 335 451 319 474 332 515 382 548 427 586 427 634H156Q143 585 182 558L227 519 222 492Z" fill="#171112"/>
+        <path d="M331 383Q350 394 353 403L336 408Q338 431 319 443L303 437 292 458 269 449 262 483" fill="none" stroke="#f5e2d3" strokeWidth="5" opacity=".7"/>
+        <path d="M177 644Q193 566 240 543L265 525 285 539 301 518 343 547Q389 565 400 644" fill="#101112"/>
+        {/* Perspective shell: exposed black/red/steel rings top and bottom */}
+        <ellipse cx="286" cy="116" rx="223" ry="79" fill="#121010" stroke="#161010" strokeWidth="16"/>
+        <ellipse cx="286" cy="110" rx="218" ry="69" fill="url(#vb-private-steel)" stroke="#120d0d" strokeWidth="13"/>
+        <ellipse cx="286" cy="110" rx="170" ry="43" fill="#201213" stroke="#f9e8dc" strokeWidth="9"/>
+        <ellipse cx="286" cy="108" rx="123" ry="25" fill="#a80b1b" stroke="#150b0c" strokeWidth="10"/>
+        <path d="M74 122Q284 195 497 119" fill="none" stroke="#151010" strokeWidth="16"/>
+        <path d="M66 132Q282 213 503 129" fill="none" stroke="#fff6ea" strokeWidth="7"/>
+        <path d="M89 598Q281 667 483 601" fill="none" stroke="#101010" strokeWidth="23"/>
+        <ellipse cx="283" cy="639" rx="209" ry="53" fill="#161111" stroke="#f9e9da" strokeWidth="15"/>
+        <ellipse cx="283" cy="649" rx="171" ry="34" fill="#941020" stroke="#1b0e0e" strokeWidth="11"/>
+        <path d="M86 665Q281 714 476 665" fill="none" stroke="#0f0c0c" strokeWidth="12"/>
+        {/* Slanted seal crosses the chamber like the approved board. */}
+        <g transform="rotate(-13 284 470)">
+          <rect x="47" y="436" width="470" height="110" fill="#fff8eb" stroke="#111" strokeWidth="8"/>
+          <path d="M72 479v-18a20 20 0 0 1 40 0v18" fill="none" stroke="#111" strokeWidth="9"/>
+          <rect x="65" y="476" width="53" height="42" rx="4" fill="#141111"/>
+          <text x="141" y="479" fontFamily="Arial,sans-serif" fontStyle="italic" fontWeight="900" fontSize="30" fill="#111">PRIVATE INPUT</text>
+          <text x="141" y="518" fontFamily="Arial,sans-serif" fontStyle="italic" fontWeight="900" fontSize="36" fill="#111">{sealed ? "SEALED" : "SEAL"}</text>
         </g>
-        <circle cx="247" cy="244" r="112" className="d4-mark-disc" />
-        <path d="M183 199H311V295H183Z" className="d4-mark-frame"/>
-        <path className="d4-mark-lock" d={sealed ? "M204 243l28 27 61-62" : "M217 223v-19a30 30 0 0 1 60 0v19M201 224H293V287H201Z"} />
-        <path d="M50 380H147M352 110H448" className="d4-mark-stroke" />
-        <text x="28" y="455" className="d4-mark-number">0{Number(partyId) + 1}</text>
+        {sealed && <path d="M215 270 270 330 361 221" fill="none" stroke="#fff8ed" strokeWidth="21" strokeLinecap="round"/>}
+        <text x="472" y="686" fill="#fff8ea" textAnchor="end" fontFamily="Arial,sans-serif" fontWeight="900" fontSize="20">0{Number(partyId)+1}</text>
       </svg>
-      <span className="d4-mark-caption">{sealed ? "RECEIPT VERIFIED" : sending ? "SECURE TRANSFER" : active ? "READY TO SEAL" : "PRIVATE CHANNEL"}</span>
+      <span className="d4-mark-caption">{sealed ? "RECEIPT VERIFIED" : sending ? "SUBMISSION IN PROGRESS" : "PRIVATE CHANNEL"}</span>
     </div>
   );
 }
-
 export default function FounderSubmissionForm({ sessionId, partyId, accountCapability }: {
   sessionId: string;
   partyId: string;
@@ -111,8 +138,8 @@ export default function FounderSubmissionForm({ sessionId, partyId, accountCapab
         <div className="d4-work-top">PARTY {validParty ? String(Number(partyId) + 1).padStart(2, "0") : "—"} <span>DIRECT MPC CHANNEL</span></div>
         <div className="d4-work-content">
           <span className="d4-kicker">01 / PRIVATE INPUT</span>
-          <h1>MAKE IT <em>PRIVATE.</em></h1>
-          <p className="d4-intro">One submission. Sent directly to your assigned MPC party—not the coordinator.</p>
+          <h1>SUBMIT YOUR <em>SALARY.</em></h1>
+          <p className="d4-intro">YOUR VALUE REMAINS PRIVATE. ONE DIRECT SUBMISSION TO YOUR ASSIGNED MPC PARTY.</p>
           {!validParty ? (
             <div className="d4-alert" role="alert"><CircleAlert size={18}/> Invalid party assignment. Contact the administrator.</div>
           ) : submitted ? (

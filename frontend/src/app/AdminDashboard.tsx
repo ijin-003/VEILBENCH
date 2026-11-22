@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import AccountInvite from "./AccountInvite";
 import ReactorStage from "./ReactorStage";
+import ApprovedResultArt from "./ApprovedResultArt";
+import "./approved-board.css";
 import { ProtocolWalkthrough } from "./LearningCenter";
 
 type HealthData = {
@@ -248,12 +250,13 @@ export default function AdminDashboard({ token }: { token: string }) {
     `${submittedCount} OF 3 INPUTS SECURED`;
 
   return (
-    <main className={`r4-reactor-root r4-reactor-${state}`}>
+    <main className={`r4-reactor-root r4-reactor-${state} ${complete && resultOpen ? "vb-ref-show-results" : ""}`}>
       <div className="r4-reactor-layout">
+        {!(complete && resultOpen) && <>
         <header className="r4-reactor-head">
           <div>
-            <span className="r4-kicker">THE REACTOR / 03</span>
-            <h1>THREE IN. <em>ONE OUT.</em></h1>
+            <span className="r4-kicker">THREE-FOUNDER / SECURE COMPUTATION</span>
+            <h1>MPC <em>REACTOR.</em></h1>
           </div>
           <div className="r4-reactor-actions">
             <span className={`r4-link ${isConnected ? "r4-link--online" : ""}`} role="status">
@@ -279,7 +282,7 @@ export default function AdminDashboard({ token }: { token: string }) {
             {!session ? (
               <button type="button" className="r4-primary" disabled={busy} onClick={() => void createSession()}>{busy ? <LoaderCircle size={18} className="ch-spin"/> : <Plus size={18}/>} CREATE SESSION <ArrowRight size={18}/></button>
             ) : canCompute ? (
-              <button type="button" className="r4-primary" onClick={() => void compute()}><Play size={17}/> ENGAGE COMPUTATION <ArrowRight size={18}/></button>
+              <button type="button" className="r4-primary" onClick={() => void compute()}><Play size={17}/> COMPUTE <ArrowRight size={18}/></button>
             ) : complete ? (
               <button type="button" className="r4-primary r4-primary--light" onClick={() => setResultOpen(value => !value)}><Check size={17}/>{resultOpen ? "HIDE RESULT" : "REVEAL RESULT"}<ChevronRight size={18}/></button>
             ) : fault ? (
@@ -290,11 +293,18 @@ export default function AdminDashboard({ token }: { token: string }) {
           </div>
         </div>
 
+        </>}
         {complete && resultOpen && session?.result && (
-          <section className="r4-results" aria-label="Computed aggregate results" aria-live="polite">
-            <span className="r4-results-mark">AGGREGATE / RELEASED</span>
-            <div><small>SUM</small><strong>{numberFormat.format(session.result.aggregate_sum)}</strong></div>
-            <div><small>AVERAGE</small><strong>{numberFormat.format(session.result.average_salary)}</strong></div>
+          <section className="r4-results vb-board-results" aria-label="Computed aggregate results" aria-live="polite">
+            <div className="vb-board-results-art" aria-hidden="true"><ApprovedResultArt /></div>
+            <div className="vb-board-results-data">
+              <h2>COMPUTATION<br/>COMPLETE.</h2>
+              <p>AGGREGATE RESULTS ONLY</p>
+              <div className="vb-board-result-row"><small>TOTAL / SUM</small><strong>{numberFormat.format(session.result.aggregate_sum)}</strong></div>
+              <div className="vb-board-result-row"><small>AVERAGE</small><strong>{numberFormat.format(session.result.average_salary)}</strong></div>
+              <span className="vb-board-results-note">THREE FOUNDERS. ONE SHARED RESULT. NO INDIVIDUAL SALARIES REVEALED.</span>
+              <button type="button" className="vb-ref-back-reactor" onClick={() => setResultOpen(false)}>← BACK TO REACTOR</button>
+            </div>
           </section>
         )}
 
