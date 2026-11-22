@@ -62,11 +62,15 @@ function MotionGraphics({ scene }: { scene: Scene }) {
 export default function VanguardHero({ onStart }: Props) {
   const [panel, setPanel] = useState<Panel | null>(null);
   const [hovered, setHovered] = useState<Scene | null>(null);
+  const [backgroundScene, setBackgroundScene] = useState<Scene | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<number | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
-  const scene = panel ?? hovered ?? "home";
+  // Explicit navigation hover wins; otherwise the illustration itself selects a scene.
+  const scene = panel ?? hovered ?? backgroundScene ?? "home";
+  // Background motion drives artwork colors only. Text/scene cards require explicit navigation interaction.
+  const graphicScene = panel ?? hovered ?? "home";
 
   function openPanel(next: Panel) {
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -85,10 +89,29 @@ export default function VanguardHero({ onStart }: Props) {
     const bounds = event.currentTarget.getBoundingClientRect();
     const x = ((event.clientX - bounds.left) / bounds.width - 0.5) * 2;
     const y = ((event.clientY - bounds.top) / bounds.height - 0.5) * 2;
+
+    // Give the background four large, invisible interactive regions. Moving
+    // anywhere over the artwork now changes the SAME scenes as navigation.
+    // Buttons retain priority through the separate `hovered` state.
+    const normalizedX = (x + 1) / 2;
+    const normalizedY = (y + 1) / 2;
+    const nextBackground: Scene = normalizedX < 0.47
+      ? normalizedY < 0.56 ? "process" : "start"
+      : normalizedY < 0.55 ? "security" : "about";
+    setBackgroundScene(nextBackground);
+
     if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     frameRef.current = requestAnimationFrame(() => {
       stageRef.current?.style.setProperty("--vb-x", `${x * 8}px`);
       stageRef.current?.style.setProperty("--vb-y", `${y * 6}px`);
+      stageRef.current?.style.setProperty("--vb-look-x", `${x * 4}px`);
+      stageRef.current?.style.setProperty("--vb-look-y", `${y * 3}px`);
+      stageRef.current?.style.setProperty("--vb-look-neg-x", `${x * -4}px`);
+      stageRef.current?.style.setProperty("--vb-skyline-x", `${x * 3.2}px`);
+      stageRef.current?.style.setProperty("--vb-skyline-y", `${y * -1.65}px`);
+      stageRef.current?.style.setProperty("--vb-title-x", `${x * .72}px`);
+      stageRef.current?.style.setProperty("--vb-pointer-x", `${((x + 1) / 2) * 100}%`);
+      stageRef.current?.style.setProperty("--vb-pointer-y", `${((y + 1) / 2) * 100}%`);
       frameRef.current = null;
     });
   }
@@ -98,7 +121,16 @@ export default function VanguardHero({ onStart }: Props) {
     frameRef.current = null;
     stageRef.current?.style.setProperty("--vb-x", "0px");
     stageRef.current?.style.setProperty("--vb-y", "0px");
+    stageRef.current?.style.setProperty("--vb-look-x", "0px");
+    stageRef.current?.style.setProperty("--vb-look-y", "0px");
+    stageRef.current?.style.setProperty("--vb-look-neg-x", "0px");
+    stageRef.current?.style.setProperty("--vb-skyline-x", "0px");
+    stageRef.current?.style.setProperty("--vb-skyline-y", "0px");
+    stageRef.current?.style.setProperty("--vb-title-x", "0px");
+    stageRef.current?.style.setProperty("--vb-pointer-x", "50%");
+    stageRef.current?.style.setProperty("--vb-pointer-y", "50%");
     setHovered(null);
+    setBackgroundScene(null);
   }
 
   useEffect(() => {
@@ -131,12 +163,22 @@ export default function VanguardHero({ onStart }: Props) {
   }, []);
 
   return (
-    <main className="vanguard" onPointerMove={handlePointerMove} onPointerLeave={resetPointer}>
-      <div ref={stageRef} className="vanguard-stage" data-scene={scene}>
+    <main className="vanguard" onPointerEnter={handlePointerMove} onPointerMove={handlePointerMove} onPointerLeave={resetPointer}>
+      <div ref={stageRef} className="vanguard-stage" data-scene={scene} data-background-active={backgroundScene !== null}>
         <div className="vanguard-art" aria-hidden="true" />
+        {/* Pixel-accurate highlight masks extracted from the approved artwork.
+            They react independently, but the base character illustration stays intact. */}
+        <div className="vanguard-art-layers" aria-hidden="true">
+          <div className="vb-art-slice vb-art-slash" />
+          <div className="vb-art-slice vb-art-skyline" />
+          <div className="vb-art-slice vb-art-title" />
+          <div className="vb-art-slice vb-art-character" />
+          <div className="vb-art-reticle" />
+          <div className="vb-art-sparks"><i /><i /><i /><i /></div>
+        </div>
         <div className="vanguard-light" aria-hidden="true" />
         <div className="vanguard-grain" aria-hidden="true" />
-        <MotionGraphics scene={scene} />
+        <MotionGraphics scene={graphicScene} />
 
         <nav className="vanguard-nav" aria-label="Main navigation">
           <button type="button" className="vanguard-nav-button" aria-label="Home" title="Home"

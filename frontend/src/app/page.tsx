@@ -1,7 +1,8 @@
 "use client";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import AdminDashboard from "./AdminDashboard";
 import VanguardHero from "./VanguardHero";
+import AuthGateway from "./AuthGateway";
 import { GuidedTour, ProtocolWalkthrough } from "./LearningCenter";
 import FounderSubmissionForm from "./submit/[sessionId]/[partyId]/FounderSubmissionForm";
 const api = (process.env.NEXT_PUBLIC_API_URL || "https://localhost:8000").replace(/\/+$/, "");
@@ -11,6 +12,22 @@ type Assignment = { session_id: string; party_id: number; capability: string };
 export default function HomePage() {
     const [identity, setIdentity] = useState<Identity | null>(null);
     const [showLanding, setShowLanding] = useState(true);
+    const [leavingLanding, setLeavingLanding] = useState(false);
+    const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => () => { if (transitionTimer.current) clearTimeout(transitionTimer.current); }, []);
+    function beginLoginTransition() {
+      if (leavingLanding) return;
+      if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        setShowLanding(false);
+        return;
+      }
+      setLeavingLanding(true);
+      transitionTimer.current = setTimeout(() => {
+        setShowLanding(false);
+        setLeavingLanding(false);
+        transitionTimer.current = null;
+      }, 640);
+    }
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -50,46 +67,42 @@ export default function HomePage() {
     } catch { setMessage("Sign-out failed. Please retry."); }
     finally { setBusy(false); }
   }
-    if (!identity && showLanding) {
-        return (
-            <VanguardHero
-      onStart= {() => setShowLanding(false)
-    }
-    />
-  );
-}
+  if (!identity && showLanding) {
+    return <>
+      <VanguardHero onStart={beginLoginTransition} />
+      {leavingLanding && <div className="vb-access-wipe" aria-hidden="true"><span>ACCESS / INITIATING</span></div>}
+    </>;
+  }
   if (identity) return <>
     <nav className="flex flex-wrap items-center justify-between gap-3 bg-slate-900 p-4 text-slate-100"><span>{identity.username} · {identity.role}</span><div className="flex flex-wrap items-center gap-2"><GuidedTour role={identity.role === "admin" ? "admin" : "participant"} /><button className="button-secondary" disabled={busy} onClick={() => void logout()}>Sign out</button></div></nav>
     {message && <p role="alert" className="p-4 text-rose-500">{message}</p>}
     {identity.role === "admin" ? <AdminDashboard token={identity.token} /> : assignment ? <FounderSubmissionForm sessionId={assignment.session_id} partyId={String(assignment.party_id)} accountCapability={assignment.capability} /> : <p className="p-6">No active assignment.</p>}
     {identity.role === "admin" && <div className="mx-auto max-w-5xl px-6 pb-10"><ProtocolWalkthrough /></div>}
   </>;
-  return <main className="min-h-screen bg-slate-950 p-6 text-slate-100"><section className="mx-auto mt-16 max-w-md space-y-5 rounded-xl border border-slate-800 bg-slate-900 p-6">
-    <button
-      type="button"
-      className="button-secondary"
-      onClick={() => {
+  return (
+    <AuthGateway
+      activate={activate}
+      busy={busy}
+      message={message}
+      username={username}
+      password={password}
+      invitation={invitation}
+      onUsernameChange={setUsername}
+      onPasswordChange={setPassword}
+      onInvitationChange={setInvitation}
+      onSubmit={submit}
+      onToggleActivate={() => {
+        setActivate(!activate);
+        setPassword("");
+        setInvitation("");
+        setMessage("");
+      }}
+      onBack={() => {
         setShowLanding(true);
         setMessage("");
         setPassword("");
         setInvitation("");
       }}
-    >
-      ← Back to homepage
-    </button>
-    <h1 className="text-3xl font-bold text-indigo-300">VEILBENCH</h1>
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <h2>{activate ? "Activate your invitation" : "Sign in"}</h2>
-      <GuidedTour role="welcome" />
-    </div>
-    <form onSubmit={submit} className="space-y-4">
-      <label className="block">Username<input required className="input mt-1 w-full" autoComplete="username" pattern="[a-z0-9][a-z0-9_.-]+" minLength={3} maxLength={80} value={username} onChange={e => setUsername(e.target.value.toLowerCase())} /></label>
-      {activate && <label className="block">Invitation code<input required className="input mt-1 w-full" type="password" autoComplete="off" value={invitation} onChange={e => setInvitation(e.target.value)} /></label>}
-      <label className="block">{activate ? "Choose password (12–128 characters)" : "Password"}<input required className="input mt-1 w-full" type="password" minLength={12} maxLength={128} autoComplete={activate ? "new-password" : "current-password"} value={password} onChange={e => setPassword(e.target.value)} /></label>
-      <button disabled={busy} className="button-primary w-full">{busy ? "Please wait…" : activate ? "Activate account" : "Sign in"}</button>
-    </form>
-    <button className="button-secondary" disabled={busy} onClick={() => { setActivate(!activate); setPassword(""); setInvitation(""); setMessage(""); }}>{activate ? "Back to sign in" : "I have an invitation"}</button>
-    {message && <p role="status">{message}</p>}
-    <p className="text-xs text-slate-400">Three MPC processes share demonstration infrastructure. Accounts separate participation, not hosting ownership.</p>
-  </section><div className="mx-auto mt-6 max-w-5xl"><ProtocolWalkthrough /></div></main>;
+    />
+  );
 }
