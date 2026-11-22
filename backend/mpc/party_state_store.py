@@ -30,8 +30,9 @@ class PartyStateStore:
 
     def _connect(self) -> sqlite3.Connection:
         directory = Path(self.database_path).resolve().parent
+        directory_existed = directory.exists()
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-        if os.name != "nt":
+        if os.name != "nt" and not directory_existed:
             os.chmod(directory, 0o700)
         connection = sqlite3.connect(self.database_path, timeout=5.0, isolation_level=None)
         if os.name != "nt":
