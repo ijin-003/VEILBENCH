@@ -11,7 +11,7 @@ const partyUrls: Record<string, string | undefined> = {
 };
 
 /** Static art only; it never receives, draws, or stores the salary. */
-function PrivateMark({ active, sending, sealed, partyId }: {
+export function PrivateMark({ active, sending, sealed, partyId }: {
   active: boolean;
   sending: boolean;
   sealed: boolean;
