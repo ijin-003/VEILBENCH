@@ -24,7 +24,7 @@ jobs:
       - name: Install project dependencies
         run: python -m pip install -r backend/requirements.txt
       - name: Run real three-process MPyC benchmark
-        run: python scripts/benchmark_mpyc_phase_c.py --runs 6 --warmup 1
+        run: python -m scripts.benchmark_mpyc_phase_c --runs 6 --warmup 1
       - name: Run existing disconnected-party safety regression
         run: python -m pytest backend/tests/test_mpyc_protocol.py -k disconnected_party_handling -q
       - name: Upload benchmark evidence
