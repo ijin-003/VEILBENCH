@@ -314,3 +314,114 @@
  .vb-ref-ring,.vb-ref-reactor--computing .vb-ref-ring,.vb-ref-led{animation:none!important}
  .d4-root .vb-ref-private-mark svg{transition:none!important}
 }
+
+
+/* PERSONA MOTION LANGUAGE — signup & sign-in shared ACCESS GATEWAY
+ * All animation is ornamental and tied to hover/pointer. No credentials
+ * are logged, persisted, or passed to artwork. Title page untouched.
+ */
+.vb-board-access-art {
+  --vb-art-x:0px; --vb-art-y:0px; --vb-lock-x:0px; --vb-lock-y:0px;
+  --vb-chain-x:0px; --vb-cursor-x:50%; --vb-cursor-y:50%;
+  contain:paint; cursor:crosshair;
+}
+.vb-board-padlock {
+  transform:translate3d(var(--vb-art-x),var(--vb-art-y),0) scale(1.035);
+  transform-origin:50% 50%;
+  transition:transform .44s cubic-bezier(.18,.76,.2,1);
+  will-change:transform;
+}
+.vb-board-lock-body {
+  translate:var(--vb-lock-x) var(--vb-lock-y);
+  transform-box:fill-box;
+  transform-origin:center;
+  transition:translate .42s cubic-bezier(.15,.8,.25,1),scale .4s cubic-bezier(.15,.8,.25,1);
+  will-change:translate;
+}
+.vb-board-chain {
+  translate:var(--vb-chain-x) 0;
+  transition:translate .62s cubic-bezier(.18,.7,.2,1);
+}
+.vb-board-chain--bottom {translate:calc(var(--vb-chain-x) * -1) 0;}
+.vb-board-target-ring {transform-box:fill-box;transform-origin:center;opacity:.6;transition:opacity .2s}
+.vb-board-access-art:hover .vb-board-lock-body{scale:1.025}
+.vb-board-access-art:hover .vb-board-target-ring{opacity:1;filter:drop-shadow(0 0 5px #ffefe1)}
+.vb-board-art-logo {transition:translate .45s cubic-bezier(.22,.8,.2,1);pointer-events:none}
+.vb-board-access-art:hover .vb-board-art-logo{translate:4px -3px}
+.vb-board-cursor-glow {
+  pointer-events:none;position:absolute;inset:0;z-index:1;
+  background:radial-gradient(circle 230px at var(--vb-cursor-x) var(--vb-cursor-y),rgba(255,255,255,.2),transparent 70%);
+  mix-blend-mode:screen;opacity:0;transition:opacity .28s ease;
+}
+.vb-board-access-art:hover .vb-board-cursor-glow{opacity:.7}
+.vb-board-speed-slash {
+  position:absolute;z-index:2;pointer-events:none;
+  width:25%;height:170%;top:-35%;left:-55%;
+  transform:skewX(-30deg);opacity:0;
+  background:linear-gradient(90deg,transparent 0%,rgba(255,252,240,.78) 42%,#fff9ed 48%,rgba(255,255,255,.06) 53%,transparent 100%);
+}
+.vb-board-access-art:hover .vb-board-speed-slash{animation:vb-board-speed-cut .8s cubic-bezier(.72,0,.18,1) both}
+@keyframes vb-board-speed-cut {
+  0%{left:-55%;opacity:0;filter:blur(7px)}
+  14%{opacity:.4}
+  55%{opacity:.65}
+  100%{left:115%;opacity:0;filter:blur(1px)}
+}
+.vb-board-motion-reticle {
+  pointer-events:none;position:absolute;inset:0;z-index:2;opacity:.7;
+  transform:translate3d(calc(var(--vb-art-x) * -.8),calc(var(--vb-art-y) * -.8),0);
+  transition:transform .45s ease;
+}
+.vb-board-motion-reticle i{
+  display:block;position:absolute;width:28px;height:28px;
+  border:1px solid rgba(255,248,230,.85);opacity:.9;
+}
+.vb-board-motion-reticle i:first-child{top:14%;left:65%;border-right:0;border-bottom:0}
+.vb-board-motion-reticle i:last-child{bottom:16%;left:29%;border-left:0;border-top:0}
+.vb-board-motion-reticle i::before{
+  content:"";position:absolute;inset:8px;background:#fff7e9;opacity:.8;clip-path:polygon(48% 0,52% 0,52% 100%,48% 100%,0 52%,0 48%,100% 48%,100% 52%);
+}
+.vb-board-access-art:hover .vb-board-motion-reticle i:first-child{animation:vb-board-bracket-nudge .9s cubic-bezier(.25,.8,.2,1) both}
+.vb-board-access-art:hover .vb-board-motion-reticle i:last-child{animation:vb-board-bracket-nudge 1s .08s cubic-bezier(.25,.8,.2,1) both}
+@keyframes vb-board-bracket-nudge {0%{scale:.7;opacity:.4}65%{scale:1.2;opacity:1}100%{scale:1;opacity:.9}}
+.vb-board-access-title{transition:translate .35s cubic-bezier(.2,.8,.2,1)}
+.vb-board-access-title:hover{translate:4px -2px}
+.vb-board-access-form label:focus-within > span:first-child{color:#d80e26}
+.vb-board-access-form label:focus-within input{box-shadow:5px 5px 0 #151313}
+.vb-board-access-submit{position:relative;overflow:hidden;isolation:isolate}
+.vb-board-access-submit::before {
+  content:"";pointer-events:none;position:absolute;z-index:-1;
+  top:-30%;bottom:-30%;left:-45%;width:40%;transform:skewX(-28deg);
+  background:#111;opacity:.26;transition:left .4s cubic-bezier(.26,.75,.21,1);
+}
+.vb-board-access-submit:hover:not(:disabled)::before{left:115%}
+.vb-board-access-submit svg{transition:translate .28s cubic-bezier(.2,.7,.2,1)}
+.vb-board-access-submit:hover:not(:disabled) svg{translate:7px 0}
+.vb-board-access[data-mode="activate"] .vb-board-access-title{font-size:clamp(46px,4.8vw,77px)}
+.vb-board-access[data-mode="activate"] .vb-board-access-main{padding-block:10px}
+.vb-board-access[data-mode="activate"] .vb-board-access-intro{margin-bottom:15px}
+.vb-board-access[data-mode="activate"] .vb-board-access-form{gap:10px}
+.vb-board-access[data-mode="activate"] .vb-board-access-form input{height:46px}
+.vb-board-access[data-mode="activate"] .vb-board-access-password button{height:46px}
+.vb-board-access[data-mode="activate"] .vb-board-access-submit{min-height:54px}
+.vb-board-access-extras>button:first-child:focus-visible,.vb-board-access-back:focus-visible{outline:3px solid #e20b25;outline-offset:3px}
+@media(max-width:680px) {
+  .vb-board-access-art{cursor:default}
+  .vb-board-access[data-mode="activate"] .vb-board-access-title{font-size:clamp(46px,10vw,62px)}
+  .vb-board-motion-reticle,.vb-board-cursor-glow{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .vb-board-access-art .vb-board-padlock,
+  .vb-board-access-art .vb-board-lock-body,
+  .vb-board-access-art .vb-board-chain,
+  .vb-board-access-art .vb-board-motion-reticle,
+  .vb-board-access-art .vb-board-art-logo,
+  .vb-board-access .vb-board-access-title,
+  .vb-board-access .vb-board-access-submit,
+  .vb-board-access .vb-board-access-submit::before,
+  .vb-board-access .vb-board-access-submit svg{animation:none!important;transition:none!important;translate:0 0!important;transform:none!important}
+  .vb-board-speed-slash,.vb-board-cursor-glow,.vb-board-motion-reticle{display:none!important}
+  .vb-board-access-art:hover .vb-board-lock-body{scale:1}
+  /* Preserve image placement while disabling only animation */
+  .vb-board-access-art .vb-board-padlock{transform:scale(1.035)!important}
+}
