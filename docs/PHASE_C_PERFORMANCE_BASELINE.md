@@ -42,6 +42,39 @@ The public $0 proof-of-concept runs coordinator and all three parties in one Ren
 
 Render Free may spin down or restart; party private input is volatile and a restart invalidates incomplete computations. Resource measurements above **cannot** establish that three live MPyC workers will fit in Render Free's memory budget.
 
+
+## Render Free hosting observations (read-only; 2026-11-22 UTC)
+
+These observations are from the connected Render service telemetry and application logs, **not the GitHub Actions runner**. No live benchmark or production account writes were performed to collect them.
+
+### Post-security-deployment baseline
+
+Observed instance `srv-dc1h06rl550s73efug7g-cmvxq`, one-minute telemetry samples from 21:47 through 21:59 UTC:
+
+| Telemetry metric | Observed value |
+|---|---:|
+| Memory, smallest sample | 74,162,180 bytes (~70.7 MiB) |
+| Memory, highest sample | 79,273,980 bytes (~75.6 MiB) |
+| Memory limit reported by Render | 536,870,900 bytes (~512 MiB) |
+| CPU usage, largest sample | 0.00477825 CPU |
+| CPU limit reported by Render | 0.15 CPU |
+
+The samples reflect the service in its observed state after a deployment and public read-only endpoint checks. **Do not label these as active-computation memory peaks**: one-minute collection can miss short worker-memory spikes and the sample window was not aligned with an authorized MPC run. The roughly 29.3 MiB GitHub Actions maximum *individual worker* observation must not be simply added to idle Render measurements to make a claimed total.
+
+### Earlier successful hosted computations (log-derived)
+
+Render application logs contain two coordinator `POST /api/v1/sessions/.../compute` responses that returned HTTP 200, at **16:03:19 UTC** and **20:10:51 UTC** on 2026-11-22. For each one, all three corresponding party `POST /party/{0,1,2}/sessions/.../compute` requests also returned HTTP 200.
+
+The existing logs record when responses were written, **not start timestamps or total request duration**. Thus these are valid hosted-computation *success observations*, but cannot yield authenticated end-to-end latency or an MPC duration. Avoid including session IDs, tokens, private salary values or personally identifying client information in report screenshots.
+
+The Render HTTP latency and request-count metric queries for the inspected range returned **no data**, so no HTTP p50/p95 claims are made.
+
+### Safe remaining measurement procedure
+
+When disposable accounts are available, create a fresh synthetic benchmark using three founders. In the browser Network panel, capture the coordinator `POST /api/v1/sessions/{id}/compute` timing and note whether Render was warm or cold. Record at least three successful, separate sessions, preserving only anonymized timing data and aggregate checks. Retrieve synchronized Render memory and CPU series at the finest useful sampling resolution and explicitly label them **sampled** rather than peak worker RSS. Compare to the 512 MiB budget without claiming a guaranteed maximum. A browser timer for the full signup-to-result workflow should be reported separately from MPC-only latency.
+
+No hosted reliability experiment should kill a live instance or invalidate another person's in-progress session.
+
 ## Remaining Phase C evidence before final report
 
 1. Obtain **live** end-to-end latency measurements for a fresh synthetic admin + three-founder workflow, ideally 3–5 non-disruptive runs at different times. Report median, range, and cold-start separately.
