@@ -617,3 +617,104 @@ body {
     transition: none !important;
   }
 }
+
+/* =========================================
+   RED VANGUARD — MOTION ENGINE V2
+   Code-driven reactive SVG compositions
+   ========================================= */
+.vanguard-stage {
+  --vb-scene-accent: #e50922;
+  --vb-scene-panel: #f7e9d0;
+}
+.vanguard-stage[data-scene="security"] {
+  --vb-scene-accent: #f7e9d0;
+  --vb-scene-panel: #e50922;
+}
+.vanguard-stage[data-scene="about"] {
+  --vb-scene-accent: #fc4f28;
+  --vb-scene-panel: #f7e9d0;
+}
+.vanguard-stage[data-scene="start"] {
+  --vb-scene-accent: #ffffff;
+  --vb-scene-panel: #e50922;
+}
+.vanguard-graphics {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+}
+.vanguard-vector { width: 100%; height: 100%; display: block; }
+.vb-vector-idle { opacity: 0; animation: vb-idle-emerge 10s ease-in-out infinite alternate; }
+.vb-idle-slash { animation: vb-slash-bob 6s ease-in-out infinite alternate; }
+.vb-idle-slash-second { animation-delay: -3s; }
+.vb-scene-vectors { opacity: 0; transform: translateX(-110px) skewX(-4deg); transform-origin: 30% 35%; transition: opacity 200ms ease, transform 500ms cubic-bezier(.2,.8,.2,1); }
+.vb-scene-vectors[data-active="true"] { opacity: 1; transform: translateX(0) skewX(0); }
+.vb-scene-stroke { stroke-dasharray: 1000; stroke-dashoffset: 0; }
+.vb-scene-vectors[data-active="true"] .vb-scene-stroke { animation: vb-draw-line 550ms cubic-bezier(.2,.8,.2,1) both; }
+.vb-scene-vectors[data-active="true"] .vb-scene-stroke-second { animation-delay: 120ms; }
+.vb-scene-arrow { animation: vb-arrow-pulse 2s ease-in-out infinite; }
+.vanguard-scene-copy {
+  position: absolute;
+  left: 13.3%; top: 29%; width: 36%; height: 22%;
+  display: flex; align-items: center;
+  opacity: 0; transform: translate(-28px, 10px) skewX(-5deg);
+  transition: opacity 180ms ease, transform 400ms cubic-bezier(.2,.8,.2,1);
+}
+.vanguard-scene-copy[data-active="true"] { opacity: 1; transform: translate(0,0) skewX(0); }
+.vanguard-scene-copy-inner { display: flex; flex-direction: column; gap: 0.2em; animation: vb-copy-arrive 400ms ease-out both; }
+.vb-scene-eyebrow { font: 900 clamp(9px,1vw,17px)/1.1 Arial,sans-serif; letter-spacing: .24em; color: #e50922; text-shadow: 1px 1px #0b090a; }
+.vanguard-stage[data-scene="security"] .vb-scene-eyebrow { color: #fff; }
+.vanguard-scene-copy strong { white-space: nowrap; color: #0b090a; font: italic 1000 clamp(20px,3.55vw,68px)/.95 Arial,Helvetica,sans-serif; letter-spacing: -.07em; text-shadow: 2px 2px 0 rgba(0,0,0,.12); }
+.vb-scene-subtitle { white-space: nowrap; font: italic 900 clamp(12px,2.0vw,36px)/1.15 Arial,Helvetica,sans-serif; letter-spacing: -.045em; color: #0b090a; }
+.vanguard-motion-index {
+  position: absolute; right: 3.4%; bottom: 4.5%; display: flex; gap: 9px; align-items: center;
+  opacity: 0; transform: translateX(8px); transition: opacity 250ms, transform 250ms;
+}
+.vanguard-motion-index[data-active="true"] { opacity: 1; transform: translateX(0); }
+.vanguard-motion-index span { font: 800 11px/1 Arial,sans-serif; letter-spacing: .18em; color: #f7e9d0; margin-right: 10px; }
+.vanguard-motion-index i { display: block; width: 17px; height: 5px; background: #f7e9d0; transform: skewX(-25deg); }
+.vanguard-motion-index i:first-of-type { background: var(--vb-scene-accent); width: 39px; }
+.vanguard-nav { z-index: 8; }
+.vanguard-nav-button { isolation: isolate; }
+.vanguard-nav-button::before {
+  content: ""; position: absolute; inset: 0; background: #e50922; transform: skewX(-20deg) scaleX(0);
+  transition: transform 250ms cubic-bezier(.2,.8,.2,1), background 250ms;
+  z-index: -1;
+}
+.vanguard-nav-button:hover::before, .vanguard-nav-button:focus-visible::before { transform: skewX(-20deg) scaleX(1); }
+.vanguard-stage[data-scene="security"] .vanguard-nav-button:hover::before { background: #d6c9b3; }
+.vanguard-start { isolation: isolate; }
+.vanguard-start-orbit {
+  position: absolute; inset: -4%; border: 2px dashed rgba(255,255,255,.0); border-radius: 50%;
+  transition: border-color 200ms, opacity 200ms;
+}
+.vanguard-start:hover .vanguard-start-orbit, .vanguard-start:focus-visible .vanguard-start-orbit {
+  border-color: rgba(255,255,255,.7); animation: vb-orbit 5s linear infinite;
+}
+.vanguard-stage[data-scene="process"] .vanguard-art { filter: hue-rotate(-9deg) contrast(1.07); }
+.vanguard-stage[data-scene="security"] .vanguard-art { filter: saturate(.66) contrast(1.10); }
+.vanguard-stage[data-scene="about"] .vanguard-art { filter: sepia(.16) contrast(1.07); }
+.vanguard-stage[data-scene="start"] .vanguard-art { filter: contrast(1.13) brightness(1.04); }
+.vanguard-art { transition: filter 450ms ease; }
+@keyframes vb-idle-emerge { 0%,45% {opacity:0} 60%,85% {opacity:.10} 100% {opacity:0} }
+@keyframes vb-slash-bob { from {transform: translateY(-8px)} to {transform: translateY(8px)} }
+@keyframes vb-draw-line { from {stroke-dashoffset:1000} to {stroke-dashoffset:0} }
+@keyframes vb-arrow-pulse { 0%,100% {transform:translateX(0);opacity:1} 50% {transform:translateX(8px);opacity:.6} }
+@keyframes vb-orbit { to {transform:rotate(360deg)} }
+@keyframes vb-copy-arrive { from {opacity:0;transform:translateX(-25px)} to {opacity:1;transform:translateX(0)} }
+@media (max-width: 767px) {
+  .vanguard-graphics { display: none; }
+  .vanguard-stage[data-scene="process"] .vanguard-art,
+  .vanguard-stage[data-scene="security"] .vanguard-art,
+  .vanguard-stage[data-scene="about"] .vanguard-art,
+  .vanguard-stage[data-scene="start"] .vanguard-art { filter: none; }
+  .vanguard-nav-button svg { position: relative; z-index: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vb-vector-idle, .vb-idle-slash, .vb-scene-arrow, .vanguard-start-orbit,
+  .vb-scene-stroke, .vanguard-scene-copy-inner { animation: none !important; }
+  .vanguard-scene-copy, .vb-scene-vectors, .vanguard-motion-index,
+  .vanguard-art, .vanguard-nav-button::before { transition: none !important; }
+}
