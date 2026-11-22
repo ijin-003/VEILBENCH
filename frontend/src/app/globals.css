@@ -1499,3 +1499,67 @@ body {
  .v5-scene *, .v5-scene *::before, .v5-scene *::after {animation:none!important;transition:none!important;}
  .v5-phase-traveling {visibility:hidden;}
 }
+
+
+/* ========================================================
+   VEILBENCH — IVORY ORBIT v6 / interactive motion graphics
+   Decoration is pointer-transparent. Actual MPC states remain
+   controlled exclusively by ReactorStage's submitted/stage props.
+   ======================================================== */
+.v6-motion-scene {
+  --v6-cursor-x:50%;--v6-cursor-y:50%;--v6-tilt-x:0px;--v6-tilt-y:0px;--v6-slasher-x:0px;--v6-slasher-y:0px;--v6-machine-x:0px;--v6-machine-y:0px;
+  cursor:crosshair;
+}
+.v6-motion-scene .v5-scene-slasher {
+  transition:transform .65s cubic-bezier(.18,.8,.22,1),clip-path .65s,background .45s,opacity .45s;
+  transform:rotate(-21deg) translate3d(var(--v6-slasher-x),var(--v6-slasher-y),0);
+}
+.v6-motion-scene:hover .v5-scene-slasher {
+  background:#f21031;
+  transform:rotate(-26deg) translate3d(var(--v6-slasher-x),var(--v6-slasher-y),0);
+  clip-path:polygon(0 20%,100% 0,100% 78%,0 100%);
+}
+.v6-motion-scene .v5-scene-orbit {transition:border-color .4s,opacity .4s,filter .4s,transform .65s cubic-bezier(.2,.8,.2,1)}
+.v6-motion-scene:hover .v5-scene-orbit--a {border-color:#e60930;transform:rotate(-23deg) scale(1.025)}
+.v6-motion-scene:hover .v5-scene-orbit--b {border-color:rgba(221,10,42,.48);transform:rotate(37deg) scale(.96)}
+.v6-motion-scene .v5-machine {transition:filter .55s ease,transform .45s cubic-bezier(.2,.8,.2,1);}
+.v6-motion-scene:hover .v5-machine {
+  transform:translate(calc(-50% + var(--v6-machine-x)),calc(-50% + var(--v6-machine-y)));
+}
+.v6-hover-core .v5-machine {filter:drop-shadow(0 0 20px rgba(235,10,45,.25))}
+.v6-hover-core .v5-machine-halo {border-top-color:#f71842;border-right-color:#f71842;box-shadow:0 0 22px #ec0c344b;animation-duration:3s}
+.v6-hover-core .v5-machine-beam {filter:drop-shadow(0 0 17px #fa153e);opacity:1;animation-duration:1s}
+.v6-hover-core .v5-machine-symbol {filter:drop-shadow(0 0 12px #f60e37);animation-duration:1.6s}
+.v6-motion-scene .v5-capsule-flight {transition:filter .3s,transform .3s}
+.v6-hover-capsule-1 .v5-capsule-1 .v5-capsule-flight,
+.v6-hover-capsule-2 .v5-capsule-2 .v5-capsule-flight,
+.v6-hover-capsule-3 .v5-capsule-3 .v5-capsule-flight {filter:drop-shadow(0 0 13px #df143e6c)}
+.v6-hover-capsule-1 .v5-capsule-1 .v5-capsule-float,
+.v6-hover-capsule-2 .v5-capsule-2 .v5-capsule-float,
+.v6-hover-capsule-3 .v5-capsule-3 .v5-capsule-float {animation-duration:2.3s}
+.v6-hover-capsule-1 .v5-capsule-1 .v5-capsule-glass,
+.v6-hover-capsule-2 .v5-capsule-2 .v5-capsule-glass,
+.v6-hover-capsule-3 .v5-capsule-3 .v5-capsule-glass {border-color:#e11338;background:linear-gradient(105deg,#fffdf5,rgba(238,23,52,.16),rgba(60,22,31,.14))}
+/* Explicitly do not fill capsules on hover: fill means backend-confirmed submission. */
+.v6-cursor-light {position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:0;transition:opacity .5s;
+ background:radial-gradient(circle 190px at var(--v6-cursor-x) var(--v6-cursor-y),rgba(238,20,52,.11),transparent 74%)}
+.v6-motion-scene:hover .v6-cursor-light {opacity:1}
+.v6-speedline {position:absolute;z-index:1;pointer-events:none;width:43%;height:3px;left:-50%;background:linear-gradient(90deg,transparent,#ef1134 45%,#fff6e5 48%,transparent 100%);transform:rotate(-19deg);opacity:0}
+.v6-speedline-one {top:22%}.v6-speedline-two {top:78%;height:2px;animation-delay:.8s}
+.v6-motion-scene:hover .v6-speedline {animation:v6-speedline 3.6s linear infinite}
+.v6-motion-scene:hover .v6-speedline-two {animation-delay:1.8s}
+.v6-cutout {pointer-events:none;position:absolute;right:3%;top:4%;z-index:3;clip-path:polygon(13% 0,100% 0,87% 100%,0 100%);width:18%;height:13%;background:#171013;transform:translateX(125%) rotate(-9deg);transition:transform .55s cubic-bezier(.2,.8,.2,1)}
+.v6-cutout span {position:absolute;left:8%;top:42%;width:78%;height:14%;background:#fa1538;transform:skewX(-24deg)}
+.v6-hover-core .v6-cutout {transform:translateX(0) rotate(-9deg)}
+.v6-burst {position:absolute;z-index:0;pointer-events:none;left:53%;top:44%;width:10px;height:10px;opacity:0;transition:opacity .35s}
+.v6-burst i {position:absolute;top:4px;left:0;width:65px;height:2px;background:linear-gradient(90deg,#e91839,transparent);transform-origin:0 0;transform:rotate(calc(var(--i) * 60deg)) translateX(100px);transition:transform .55s}
+.v6-burst i:nth-child(1){--i:0}.v6-burst i:nth-child(2){--i:1}.v6-burst i:nth-child(3){--i:2}.v6-burst i:nth-child(4){--i:3}.v6-burst i:nth-child(5){--i:4}.v6-burst i:nth-child(6){--i:5}
+.v6-hover-core .v6-burst {opacity:.85}
+.v6-hover-core .v6-burst i {transform:rotate(calc(var(--i) * 60deg)) translateX(166px)}
+@keyframes v6-speedline {0%{left:-50%;opacity:0}12%{opacity:.8}65%{opacity:.8}100%{left:110%;opacity:0}}
+@media (hover:none){.v6-motion-scene{cursor:default}.v6-cutout,.v6-speedline{display:none}}
+@media (prefers-reduced-motion:reduce){
+ .v6-motion-scene .v5-scene-slasher,.v6-motion-scene .v5-machine,.v6-motion-scene .v5-scene-orbit {transition:none!important;transform:none!important}
+ .v6-motion-scene .v5-machine{transform:translate(-50%,-50%)!important}
+ .v6-cutout,.v6-speedline,.v6-burst,.v6-cursor-light{display:none!important}
+}

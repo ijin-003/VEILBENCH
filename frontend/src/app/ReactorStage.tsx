@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 /** Visual state only: salary data and tokens never reach this component. */
 type Props = { submitted: ReadonlySet<number>; stage: string };
 type CapsulePhase = "floating" | "sealing" | "traveling" | "docked";
+type HoverTarget = "ambient" | "core" | "capsule-1" | "capsule-2" | "capsule-3";
 const IDS = [0, 1, 2] as const;
 
 function Capsule({ id, received, initial }: { id: number; received: boolean; initial: boolean }) {
@@ -54,7 +55,48 @@ function Capsule({ id, received, initial }: { id: number; received: boolean; ini
 }
 
 export default function ReactorStage({ submitted, stage }: Props) {
+  const [hoverTarget, setHoverTarget] = useState<HoverTarget>("ambient");
+  const sceneRef = useRef<HTMLDivElement>(null);
   const count = IDS.filter(id => submitted.has(id)).length;
+
+  function handleMotion(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.pointerType !== "mouse") return;
+    const element = sceneRef.current;
+    if (!element) return;
+    const bounds = element.getBoundingClientRect();
+    const x = (event.clientX - bounds.left) / bounds.width;
+    const y = (event.clientY - bounds.top) / bounds.height;
+    element.style.setProperty("--v6-cursor-x", `${x * 100}%`);
+    element.style.setProperty("--v6-cursor-y", `${y * 100}%`);
+    element.style.setProperty("--v6-tilt-x", `${(x - .5) * 12}px`);
+    element.style.setProperty("--v6-tilt-y", `${(y - .5) * 9}px`);
+    element.style.setProperty("--v6-slasher-x", `${(x - .5) * -12}px`);
+    element.style.setProperty("--v6-slasher-y", `${(y - .5) * -6}px`);
+    element.style.setProperty("--v6-machine-x", `${(x - .5) * 4.6}px`);
+    element.style.setProperty("--v6-machine-y", `${(y - .5) * 3.2}px`);
+
+    // Hit regions follow the visible capsules and the central machine.
+    // A floating capsule gets its own hover treatment; never change its
+    // submitted/received state merely because it was hovered.
+    const candidates: { target: HoverTarget; x: number; y: number; radius: number; docked?: boolean }[] = [
+      { target: "capsule-1", x: .295, y: .18, radius: .15, docked: submitted.has(0) },
+      { target: "capsule-2", x: .15, y: .65, radius: .16, docked: submitted.has(1) },
+      { target: "capsule-3", x: .84, y: .40, radius: .15, docked: submitted.has(2) },
+    ];
+    const nearest = candidates.find(c => !c.docked && Math.hypot((x-c.x)*.8, y-c.y) < c.radius);
+    const next: HoverTarget = nearest?.target ?? (x > .35 && x < .72 && y > .17 && y < .88 ? "core" : "ambient");
+    setHoverTarget(previous => previous === next ? previous : next);
+  }
+
+  function resetMotion() {
+    setHoverTarget("ambient");
+    sceneRef.current?.style.setProperty("--v6-tilt-x", "0px");
+    sceneRef.current?.style.setProperty("--v6-tilt-y", "0px");
+    sceneRef.current?.style.setProperty("--v6-slasher-x", "0px");
+    sceneRef.current?.style.setProperty("--v6-slasher-y", "0px");
+    sceneRef.current?.style.setProperty("--v6-machine-x", "0px");
+    sceneRef.current?.style.setProperty("--v6-machine-y", "0px");
+  }
   const computing = stage === "computing";
   const completed = stage === "completed";
   const [mounted, setMounted] = useState(false);
@@ -63,7 +105,13 @@ export default function ReactorStage({ submitted, stage }: Props) {
   const [firstSnapshot] = useState(() => IDS.map(id => submitted.has(id)));
 
   return (
-    <div className={`v5-scene ${computing ? "v5-scene--computing" : ""} ${completed ? "v5-scene--completed" : ""} ${count === 3 ? "v5-scene--ready" : ""}`}>
+    <div ref={sceneRef} onPointerMove={handleMotion} onPointerLeave={resetMotion}
+      className={`v5-scene v6-motion-scene v6-hover-${hoverTarget} ${computing ? "v5-scene--computing" : ""} ${completed ? "v5-scene--completed" : ""} ${count === 3 ? "v5-scene--ready" : ""}`}>
+      <div className="v6-cursor-light" aria-hidden="true" />
+      <div className="v6-speedline v6-speedline-one" aria-hidden="true" />
+      <div className="v6-speedline v6-speedline-two" aria-hidden="true" />
+      <div className="v6-cutout" aria-hidden="true"><span /></div>
+      <div className="v6-burst" aria-hidden="true"><i/><i/><i/><i/><i/><i/></div>
       <div className="v5-scene-slasher" aria-hidden="true" />
       <div className="v5-scene-orbit v5-scene-orbit--a" aria-hidden="true" />
       <div className="v5-scene-orbit v5-scene-orbit--b" aria-hidden="true" />
