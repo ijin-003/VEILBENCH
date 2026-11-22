@@ -4,6 +4,7 @@ import logging
 from collections.abc import AsyncGenerator
 
 from fastapi import HTTPException, status
+from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -36,10 +37,14 @@ class Database:
 
         engine = create_async_engine(settings.DATABASE_URL, pool_pre_ping=True)
         try:
+            async with engine.connect() as connection:
+                await connection.execute(text("SELECT 1"))
             if settings.DATABASE_AUTO_CREATE:
+                if settings.ENVIRONMENT.lower() == "production":
+                    raise RuntimeError("Production schema must be managed with Alembic migrations")
                 async with engine.begin() as connection:
                     await connection.run_sync(Base.metadata.create_all)
-        except SQLAlchemyError:
+        except (SQLAlchemyError, RuntimeError):
             await engine.dispose()
             if settings.ENVIRONMENT.lower() == "production":
                 raise

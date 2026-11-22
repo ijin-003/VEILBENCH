@@ -11,3 +11,14 @@ __pycache__/
 frontend/node_modules/
 frontend/.next/
 infrastructure/certs/
+
+# Local MPyC certificates and private keys
+/.config/
+
+infrastructure/certs_backup_*/
+.state/
+.env.production
+backups/
+*.dump
+*.sql.gz
+frontend/.vercel/

@@ -24,7 +24,26 @@ def _b64encode(value: bytes) -> str:
 
 
 def _b64decode(value: str) -> bytes:
-    return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+    if not isinstance(value, str) or not value:
+        raise ValueError("Invalid Base64 value")
+
+    if not all(
+        ch.isascii() and (ch.isalnum() or ch in "-_")
+        for ch in value
+    ):
+        raise ValueError("Invalid Base64 characters")
+
+    decoded = base64.b64decode(
+        value + "=" * (-len(value) % 4),
+        altchars=b"-_",
+        validate=True,
+    )
+
+    # Reject alternative, non-canonical encodings.
+    if _b64encode(decoded) != value:
+        raise ValueError("Non-canonical Base64 encoding")
+
+    return decoded
 
 
 def issue_founder_token(secret: str, session_id: str, party_id: int, expires_at: int) -> str:

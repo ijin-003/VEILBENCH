@@ -77,10 +77,11 @@ def main():
         print(f"    Control cert: {paths['control']['cert']}")
     print(f"  API cert:         {result['api']['cert']}")
     print(f"  Coordinator cert: {result['coordinator']['cert']}")
+    print(f"  Edge client cert: {result['edge']['cert']}")
     print()
     print("SECURITY REMINDERS:")
     print("  - ca/ca.key is the CA private key. NEVER distribute it.")
-    print("  - Each party key and coordinator.key must stay with its owner ONLY.")
+    print("  - Each party key, coordinator.key, and edge.key must stay with its owner ONLY.")
     print("  - Self-signed certs are for development/academic use only.")
     print("  - Add infrastructure/certs/ to .gitignore (already done).")
 

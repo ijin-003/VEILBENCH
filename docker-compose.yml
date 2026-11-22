@@ -22,14 +22,16 @@ services:
       retries: 10
 
   veilbench-backend:
+    # Local development only: Windows bind-mount ACLs do not map to UID 10001.
+    user: "0:0"
     build:
       context: .
       dockerfile: infrastructure/Dockerfile.backend
     environment:
       ENVIRONMENT: development
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@veilbench-db:5432/${POSTGRES_DB}
-      ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
-      FRONTEND_PUBLIC_URL: http://localhost:3000
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-http://localhost:3000}
       COORDINATOR_ADMIN_TOKEN: ${COORDINATOR_ADMIN_TOKEN:?set COORDINATOR_ADMIN_TOKEN in .env}
       MPC_FOUNDER_TOKEN_SECRET_0: ${MPC_FOUNDER_TOKEN_SECRET_0:?set party 0 signing secret}
       MPC_FOUNDER_TOKEN_SECRET_1: ${MPC_FOUNDER_TOKEN_SECRET_1:?set party 1 signing secret}
@@ -44,7 +46,7 @@ services:
       MPC_CA_CERT_PATH: /app/certs/ca/ca.crt
       MPC_CLIENT_CERT_PATH: /app/certs/coordinator/coordinator.crt
       MPC_CLIENT_KEY_PATH: /app/certs/coordinator/coordinator.key
-      MPC_PARTY_PUBLIC_URLS: https://localhost:8100,https://localhost:8101,https://localhost:8102
+      MPC_PARTY_PUBLIC_URLS: ${MPC_PARTY_PUBLIC_URLS:-https://localhost:8100,https://localhost:8101,https://localhost:8102}
     ports:
       - "8000:8000"
     volumes:
@@ -70,11 +72,16 @@ services:
     build:
       context: ./frontend
       dockerfile: ../infrastructure/Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://localhost:8000}
+        NEXT_PUBLIC_PARTY_0_URL: ${NEXT_PUBLIC_PARTY_0_URL:-https://localhost:8100}
+        NEXT_PUBLIC_PARTY_1_URL: ${NEXT_PUBLIC_PARTY_1_URL:-https://localhost:8101}
+        NEXT_PUBLIC_PARTY_2_URL: ${NEXT_PUBLIC_PARTY_2_URL:-https://localhost:8102}
     environment:
-      NEXT_PUBLIC_API_URL: https://localhost:8000
-      NEXT_PUBLIC_PARTY_0_URL: https://localhost:8100
-      NEXT_PUBLIC_PARTY_1_URL: https://localhost:8101
-      NEXT_PUBLIC_PARTY_2_URL: https://localhost:8102
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://localhost:8000}
+      NEXT_PUBLIC_PARTY_0_URL: ${NEXT_PUBLIC_PARTY_0_URL:-https://localhost:8100}
+      NEXT_PUBLIC_PARTY_1_URL: ${NEXT_PUBLIC_PARTY_1_URL:-https://localhost:8101}
+      NEXT_PUBLIC_PARTY_2_URL: ${NEXT_PUBLIC_PARTY_2_URL:-https://localhost:8102}
     ports:
       - "3000:3000"
     depends_on:
@@ -83,6 +90,8 @@ services:
       - veilbench-net
 
   veilbench-mpc-node0:
+    # Local development only: Windows bind-mount ACLs do not map to UID 10001.
+    user: "0:0"
     build:
       context: .
       dockerfile: infrastructure/Dockerfile.mpc-node
@@ -90,8 +99,9 @@ services:
       MPC_PARTIES_COUNT: "3"
       MPC_FOUNDER_TOKEN_SECRET: ${MPC_FOUNDER_TOKEN_SECRET_0:?set party 0 signing secret}
       MPC_ENABLE_TLS: "true"
-      MPC_PARTY_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      MPC_PARTY_ALLOWED_ORIGINS: ${MPC_PARTY_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
       MPC_BASE_PORT: "11365"
+      MPC_PARTY_STATE_DB_PATH: /var/lib/veilbench-party/state.sqlite3
       MPC_PARTY_0_HOST: veilbench-mpc-node0
       MPC_PARTY_1_HOST: veilbench-mpc-node1
       MPC_PARTY_2_HOST: veilbench-mpc-node2
@@ -106,10 +116,13 @@ services:
       - ./infrastructure/certs/party_0/control/control.key:/app/certs/control/control.key:ro
       - ./infrastructure/certs/party_0/party_0.crt:/app/.config/party_0.crt:ro
       - ./infrastructure/certs/party_0/party_0.key:/app/.config/party_0.key:ro
+      - party0_state:/var/lib/veilbench-party
     networks:
       - mpc-internal-net
 
   veilbench-mpc-node1:
+    # Local development only: Windows bind-mount ACLs do not map to UID 10001.
+    user: "0:0"
     build:
       context: .
       dockerfile: infrastructure/Dockerfile.mpc-node
@@ -127,10 +140,13 @@ services:
       - ./infrastructure/certs/party_1/control/control.key:/app/certs/control/control.key:ro
       - ./infrastructure/certs/party_1/party_1.crt:/app/.config/party_1.crt:ro
       - ./infrastructure/certs/party_1/party_1.key:/app/.config/party_1.key:ro
+      - party1_state:/var/lib/veilbench-party
     networks:
       - mpc-internal-net
 
   veilbench-mpc-node2:
+    # Local development only: Windows bind-mount ACLs do not map to UID 10001.
+    user: "0:0"
     build:
       context: .
       dockerfile: infrastructure/Dockerfile.mpc-node
@@ -148,6 +164,7 @@ services:
       - ./infrastructure/certs/party_2/control/control.key:/app/certs/control/control.key:ro
       - ./infrastructure/certs/party_2/party_2.crt:/app/.config/party_2.crt:ro
       - ./infrastructure/certs/party_2/party_2.key:/app/.config/party_2.key:ro
+      - party2_state:/var/lib/veilbench-party
     networks:
       - mpc-internal-net
 
@@ -160,3 +177,6 @@ networks:
 
 volumes:
   postgres_data:
+  party0_state:
+  party1_state:
+  party2_state:

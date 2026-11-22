@@ -44,6 +44,16 @@ class TestCertificateGeneration:
                 assert os.path.isfile(party["control"]["cert"])
             assert os.path.isfile(result["api"]["cert"])
             assert os.path.isfile(result["coordinator"]["cert"])
+            assert os.path.isfile(result["edge"]["cert"])
+            assert os.path.isfile(result["edge"]["key"])
+            assert not os.path.exists(os.path.join(tmpdir, "edge", "edge.csr"))
+            assert not os.path.exists(os.path.join(tmpdir, "edge", "edge.ext"))
+
+            edge_eku = subprocess.run(
+                ["openssl", "x509", "-in", result["edge"]["cert"], "-noout", "-text"],
+                capture_output=True, text=True, check=True,
+            ).stdout
+            assert "TLS Web Client Authentication" in edge_eku
 
     def test_idempotent_generation(self):
         """Running generate_certificates twice should not fail (existing files are skipped)."""

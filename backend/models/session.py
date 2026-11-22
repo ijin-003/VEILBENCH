@@ -7,7 +7,7 @@ keys are intentionally absent from this schema.
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import JSON, BigInteger, DateTime, Float, String
+from sqlalchemy import JSON, BigInteger, DateTime, Float, Index, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -26,6 +26,7 @@ class SessionState(str, Enum):
 
 class BenchmarkSession(Base):
     __tablename__ = "benchmark_sessions"
+    __table_args__ = (Index("ix_benchmark_sessions_expires_at", "expires_at"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     state: Mapped[str] = mapped_column(String(16), default=SessionState.CREATED.value, nullable=False)

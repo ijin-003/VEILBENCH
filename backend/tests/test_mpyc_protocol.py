@@ -170,8 +170,8 @@ async def test_disconnected_party_handling():
         p = await asyncio.create_subprocess_exec(
             *party_args,
             stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.DEVNULL,
+stderr=asyncio.subprocess.DEVNULL,
         )
         procs.append(p)
         p.stdin.write(b"50000\n")

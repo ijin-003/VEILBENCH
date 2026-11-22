@@ -41,7 +41,7 @@ def _sign_certificate(
     if not csr.exists():
         _run(["openssl", "req", "-new", "-key", str(key), "-out", str(csr), "-subj", subject])
     if not cert.exists():
-        extension.write_text("\n".join(extension_lines) + "\n", encoding="utf-8")
+        extension.write_text("\n".join(["subjectKeyIdentifier=hash", "authorityKeyIdentifier=keyid,issuer"] + extension_lines) + "\n", encoding="utf-8")
         _run(
             [
                 "openssl", "x509", "-req", "-in", str(csr), "-CA", str(ca_cert),
@@ -70,7 +70,7 @@ def generate_certificates(
         _run(
             [
                 "openssl", "req", "-new", "-x509", "-key", str(ca_key), "-out", str(ca_cert),
-                "-days", str(validity_days), "-subj", "/CN=VEILBENCH Development CA/O=VEILBENCH",
+                "-days", str(validity_days), "-subj", "/CN=VEILBENCH Development CA/O=VEILBENCH", "-addext", "basicConstraints=critical,CA:TRUE", "-addext", "keyUsage=critical,keyCertSign,cRLSign", "-addext", "subjectKeyIdentifier=hash",
             ]
         )
 
@@ -125,7 +125,23 @@ def generate_certificates(
         ca_cert=ca_cert,
         validity_days=validity_days,
     )
-    return {"parties": parties, "api": api, "coordinator": coordinator}
+    # The public edge is a separate mTLS client. Its key is mounted only into
+    # Caddy; it is never shared with the coordinator or any MPC party.
+    edge = _sign_certificate(
+        base=base,
+        name="edge",
+        subject="/CN=veilbench-edge/O=VEILBENCH/OU=Proxy",
+        extension_lines=["basicConstraints=CA:FALSE", "extendedKeyUsage=clientAuth"],
+        ca_key=ca_key,
+        ca_cert=ca_cert,
+        validity_days=validity_days,
+    )
+    # Caddy mounts this directory read-only. Keep only its certificate and
+    # private key there; the CSR and extension file are build-time artifacts.
+    edge_dir = Path(edge["cert"]).parent
+    for transient in (edge_dir / "edge.csr", edge_dir / "edge.ext"):
+        transient.unlink(missing_ok=True)
+    return {"parties": parties, "api": api, "coordinator": coordinator, "edge": edge}
 
 
 def check_openssl_available() -> bool:

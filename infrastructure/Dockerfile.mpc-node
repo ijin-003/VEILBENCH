@@ -1,38 +1,29 @@
-# Dockerfile for a single VEILBENCH MPC party node.
-# Each node runs the party_service FastAPI app as an independent process.
-#
-# TRUST MODEL LIMITATION:
-# Running three containers on the same Docker host does NOT provide
-# independent organizational trust. See docs/DISTRIBUTED_INFRASTRUCTURE.md.
+# One independently configured MPyC party process per container.
+# Three containers on one VPS are not independent administrative domains.
+FROM python:3.11-slim AS runtime
 
-FROM python:3.11-slim
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+RUN groupadd --system --gid 10001 veilbench \
+    && useradd --system --uid 10001 --gid veilbench --home-dir /app veilbench
 
-# OpenSSL is used by the explicit certificate-generation step.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    openssl \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+COPY backend/requirements-prod.txt ./requirements.txt
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
 COPY backend/ ./backend/
-COPY pyproject.toml .
+COPY pyproject.toml ./pyproject.toml
 
-RUN mkdir -p /app/.config /app/certs/control /app/certs/ca
+RUN mkdir -p /app/.config /app/certs/control /app/certs/ca /var/lib/veilbench-party \
+    && chown -R veilbench:veilbench /app /var/lib/veilbench-party
 
-# MPC party service port (overridden per-node via env)
-EXPOSE 8100
+USER 10001:10001
+EXPOSE 8100 11365 11366 11367
 
-# The control-plane certificate includes localhost as a SAN.
-HEALTHCHECK --interval=5s --timeout=3s --retries=5 \
-    CMD python -c "import ssl, urllib.request; c=ssl.create_default_context(cafile='/app/certs/ca/ca.crt'); urllib.request.urlopen('https://localhost:8100/health', context=c)" || exit 1
+HEALTHCHECK --interval=10s --timeout=4s --start-period=20s --retries=5 \
+    CMD python -c "import os,ssl,urllib.request; p=os.environ['MPC_PARTY_ID']; c=ssl.create_default_context(cafile='/app/certs/ca/ca.crt'); c.load_cert_chain(f'/app/.config/party_{p}.crt',f'/app/.config/party_{p}.key'); urllib.request.urlopen('https://localhost:8100/health', context=c, timeout=3)" || exit 1
 
-# HTTPS protects direct founder input and coordinator control requests. MPyC
-# mTLS material is mounted separately at /app/.config for its subprocesses.
-CMD ["sh", "-c", "test -r /app/certs/control/control.crt && test -r /app/certs/control/control.key && test -r /app/certs/ca/ca.crt && exec uvicorn backend.mpc.party_service:app --host 0.0.0.0 --port 8100 --ssl-certfile /app/certs/control/control.crt --ssl-keyfile /app/certs/control/control.key --ssl-ca-certs /app/certs/ca/ca.crt"]
+CMD ["uvicorn", "backend.mpc.party_service:app", "--host", "0.0.0.0", "--port", "8100", "--ssl-certfile", "/app/certs/control/control.crt", "--ssl-keyfile", "/app/certs/control/control.key", "--ssl-ca-certs", "/app/certs/ca/ca.crt"]

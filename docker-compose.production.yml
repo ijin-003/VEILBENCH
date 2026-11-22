@@ -1,0 +1,320 @@
+# Production-like academic deployment. Only Caddy publishes public ports.
+# Run with: docker compose --env-file .env.production -f docker-compose.production.yml up -d --build
+
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  veilbench-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - database-internal
+    restart: unless-stopped
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+
+  # No shared env_file: each party receives only its own signing and control secret.
+  veilbench-mpc-node0:
+    build:
+      context: .
+      dockerfile: infrastructure/Dockerfile.mpc-node
+    environment: &party_environment
+      ENVIRONMENT: production
+      MPC_PARTIES_COUNT: "3"
+      MPC_ENABLE_TLS: "true"
+      MPC_REQUIRE_CLIENT_CERT: ${MPC_REQUIRE_CLIENT_CERT:?set client certificate enforcement}
+      MPC_PARTY_ALLOWED_ORIGINS: ${MPC_PARTY_ALLOWED_ORIGINS:?set exact Vercel origin}
+      MPC_BASE_PORT: "11365"
+      MPC_PARTY_STATE_DB_PATH: /var/lib/veilbench-party/state.sqlite3
+      MPC_PARTY_0_HOST: veilbench-mpc-node0
+      MPC_PARTY_1_HOST: veilbench-mpc-node1
+      MPC_PARTY_2_HOST: veilbench-mpc-node2
+      MPC_PARTY_ID: "0"
+      MPC_FOUNDER_TOKEN_SECRET: ${MPC_FOUNDER_TOKEN_SECRET_0:?set founder secret 0}
+      MPC_COORDINATOR_TOKEN: ${MPC_NODE0_TOKEN:?set party control token 0}
+    command:
+      - uvicorn
+      - backend.mpc.party_service:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8100"
+      - --ssl-certfile
+      - /app/certs/control/control.crt
+      - --ssl-keyfile
+      - /app/certs/control/control.key
+      - --ssl-ca-certs
+      - /app/certs/ca/ca.crt
+      - --ssl-cert-reqs
+      - "2"
+    expose:
+      - "8100"
+      - "11365-11367"
+    volumes:
+      - ./infrastructure/certs/ca/ca.crt:/app/certs/ca/ca.crt:ro
+      - ./infrastructure/certs/ca/ca.crt:/app/.config/mpyc_ca.crt:ro
+      - ./infrastructure/certs/party_0/control/control.crt:/app/certs/control/control.crt:ro
+      - ./infrastructure/certs/party_0/control/control.key:/app/certs/control/control.key:ro
+      - ./infrastructure/certs/party_0/party_0.crt:/app/.config/party_0.crt:ro
+      - ./infrastructure/certs/party_0/party_0.key:/app/.config/party_0.key:ro
+      - party0_state:/var/lib/veilbench-party
+    networks:
+      - mpc-internal
+    restart: unless-stopped
+    logging: *default-logging
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  veilbench-mpc-node1:
+    build:
+      context: .
+      dockerfile: infrastructure/Dockerfile.mpc-node
+    environment:
+      <<: *party_environment
+      MPC_PARTY_ID: "1"
+      MPC_FOUNDER_TOKEN_SECRET: ${MPC_FOUNDER_TOKEN_SECRET_1:?set founder secret 1}
+      MPC_COORDINATOR_TOKEN: ${MPC_NODE1_TOKEN:?set party control token 1}
+    command:
+      - uvicorn
+      - backend.mpc.party_service:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8100"
+      - --ssl-certfile
+      - /app/certs/control/control.crt
+      - --ssl-keyfile
+      - /app/certs/control/control.key
+      - --ssl-ca-certs
+      - /app/certs/ca/ca.crt
+      - --ssl-cert-reqs
+      - "2"
+    expose:
+      - "8100"
+      - "11365-11367"
+    volumes:
+      - ./infrastructure/certs/ca/ca.crt:/app/certs/ca/ca.crt:ro
+      - ./infrastructure/certs/ca/ca.crt:/app/.config/mpyc_ca.crt:ro
+      - ./infrastructure/certs/party_1/control/control.crt:/app/certs/control/control.crt:ro
+      - ./infrastructure/certs/party_1/control/control.key:/app/certs/control/control.key:ro
+      - ./infrastructure/certs/party_1/party_1.crt:/app/.config/party_1.crt:ro
+      - ./infrastructure/certs/party_1/party_1.key:/app/.config/party_1.key:ro
+      - party1_state:/var/lib/veilbench-party
+    networks:
+      - mpc-internal
+    restart: unless-stopped
+    logging: *default-logging
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  veilbench-mpc-node2:
+    build:
+      context: .
+      dockerfile: infrastructure/Dockerfile.mpc-node
+    environment:
+      <<: *party_environment
+      MPC_PARTY_ID: "2"
+      MPC_FOUNDER_TOKEN_SECRET: ${MPC_FOUNDER_TOKEN_SECRET_2:?set founder secret 2}
+      MPC_COORDINATOR_TOKEN: ${MPC_NODE2_TOKEN:?set party control token 2}
+    command:
+      - uvicorn
+      - backend.mpc.party_service:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8100"
+      - --ssl-certfile
+      - /app/certs/control/control.crt
+      - --ssl-keyfile
+      - /app/certs/control/control.key
+      - --ssl-ca-certs
+      - /app/certs/ca/ca.crt
+      - --ssl-cert-reqs
+      - "2"
+    expose:
+      - "8100"
+      - "11365-11367"
+    volumes:
+      - ./infrastructure/certs/ca/ca.crt:/app/certs/ca/ca.crt:ro
+      - ./infrastructure/certs/ca/ca.crt:/app/.config/mpyc_ca.crt:ro
+      - ./infrastructure/certs/party_2/control/control.crt:/app/certs/control/control.crt:ro
+      - ./infrastructure/certs/party_2/control/control.key:/app/certs/control/control.key:ro
+      - ./infrastructure/certs/party_2/party_2.crt:/app/.config/party_2.crt:ro
+      - ./infrastructure/certs/party_2/party_2.key:/app/.config/party_2.key:ro
+      - party2_state:/var/lib/veilbench-party
+    networks:
+      - mpc-internal
+    restart: unless-stopped
+    logging: *default-logging
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # The coordinator needs all founder signing secrets and party control tokens, but
+  # receives only DATABASE_URL (not the standalone Postgres password variable).
+  veilbench-backend:
+    build:
+      context: .
+      dockerfile: infrastructure/Dockerfile.backend
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      DATABASE_AUTO_CREATE: "false"
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+      COORDINATOR_ADMIN_TOKEN: ${COORDINATOR_ADMIN_TOKEN:?set coordinator admin token}
+      FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:?set exact Vercel origin}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?set exact Vercel origin}
+      MPC_PARTY_PUBLIC_URLS: ${MPC_PARTY_PUBLIC_URLS:?set three public party URLs}
+      MPC_PARTIES_COUNT: "3"
+      MPC_THRESHOLD: "1"
+      MPC_TIMEOUT_SECONDS: ${MPC_TIMEOUT_SECONDS:-30}
+      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-1800}
+      MPC_FOUNDER_TOKEN_SECRET_0: ${MPC_FOUNDER_TOKEN_SECRET_0:?set founder signing secret 0}
+      MPC_FOUNDER_TOKEN_SECRET_1: ${MPC_FOUNDER_TOKEN_SECRET_1:?set founder signing secret 1}
+      MPC_FOUNDER_TOKEN_SECRET_2: ${MPC_FOUNDER_TOKEN_SECRET_2:?set founder signing secret 2}
+      MPC_NODE0_TOKEN: ${MPC_NODE0_TOKEN:?set party control token 0}
+      MPC_NODE1_TOKEN: ${MPC_NODE1_TOKEN:?set party control token 1}
+      MPC_NODE2_TOKEN: ${MPC_NODE2_TOKEN:?set party control token 2}
+      MPC_REQUIRE_TLS: "true"
+      MPC_NODE0_URL: https://veilbench-mpc-node0:8100
+      MPC_NODE1_URL: https://veilbench-mpc-node1:8100
+      MPC_NODE2_URL: https://veilbench-mpc-node2:8100
+      MPC_CA_CERT_PATH: /app/certs/ca/ca.crt
+      MPC_CLIENT_CERT_PATH: /app/certs/coordinator/coordinator.crt
+      MPC_CLIENT_KEY_PATH: /app/certs/coordinator/coordinator.key
+    command:
+      - sh
+      - -c
+      - >-
+        python -c "from backend.config import settings; settings.validate_production_configuration()" &&
+        alembic upgrade head &&
+        exec uvicorn backend.main:app --host 0.0.0.0 --port 8000
+        --ssl-certfile /app/certs/api/api.crt
+        --ssl-keyfile /app/certs/api/api.key
+        --ssl-ca-certs /app/certs/ca/ca.crt
+        --ssl-cert-reqs 2
+    expose:
+      - "8000"
+    volumes:
+      - ./infrastructure/certs/ca/ca.crt:/app/certs/ca/ca.crt:ro
+      - ./infrastructure/certs/api/api.crt:/app/certs/api/api.crt:ro
+      - ./infrastructure/certs/api/api.key:/app/certs/api/api.key:ro
+      - ./infrastructure/certs/coordinator/coordinator.crt:/app/certs/coordinator/coordinator.crt:ro
+      - ./infrastructure/certs/coordinator/coordinator.key:/app/certs/coordinator/coordinator.key:ro
+    networks:
+      - database-internal
+      - backend-edge
+      - mpc-internal
+    depends_on:
+      veilbench-db:
+        condition: service_healthy
+      veilbench-mpc-node0:
+        condition: service_healthy
+      veilbench-mpc-node1:
+        condition: service_healthy
+      veilbench-mpc-node2:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *default-logging
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # The public edge receives hostnames only; it never receives application secrets.
+  veilbench-edge:
+    image: caddy:2.11.9-alpine
+    # The dedicated edge key is root-owned (0600); capabilities are otherwise dropped.
+    user: "0:0"
+    environment:
+      VEILBENCH_API_HOST: ${VEILBENCH_API_HOST:?set API hostname}
+      VEILBENCH_PARTY0_HOST: ${VEILBENCH_PARTY0_HOST:?set party 0 hostname}
+      VEILBENCH_PARTY1_HOST: ${VEILBENCH_PARTY1_HOST:?set party 1 hostname}
+      VEILBENCH_PARTY2_HOST: ${VEILBENCH_PARTY2_HOST:?set party 2 hostname}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./infrastructure/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./infrastructure/certs/edge:/etc/caddy/certs:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - public-edge
+      - backend-edge
+      - mpc-internal
+    depends_on:
+      veilbench-backend:
+        condition: service_healthy
+      veilbench-mpc-node0:
+        condition: service_healthy
+      veilbench-mpc-node1:
+        condition: service_healthy
+      veilbench-mpc-node2:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *default-logging
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+
+networks:
+  public-edge:
+    driver: bridge
+  database-internal:
+    driver: bridge
+    internal: true
+  backend-edge:
+    driver: bridge
+    internal: true
+  mpc-internal:
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres_data:
+  party0_state:
+  party1_state:
+  party2_state:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,152 @@
+# Public edge for the academic deployment.
+# Only coordinator API routes and the founder-input endpoint are exposed.
+# Party control routes (/status, /compute, /result, /shutdown) remain private.
+
+(common_security_headers) {
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        -Server
+    }
+}
+
+{$VEILBENCH_API_HOST} {
+    import common_security_headers
+
+    @health path /health /health/live /health/ready /api/v1/health /api/v1/health/live /api/v1/health/ready
+    handle @health {
+        reverse_proxy https://veilbench-backend:8000 {
+            transport http {
+                tls_trust_pool file /etc/caddy/certs/ca.crt
+                tls_client_auth /etc/caddy/certs/edge.crt /etc/caddy/certs/edge.key
+                tls_server_name veilbench-backend
+            }
+        }
+    }
+
+    @api path /api/v1/*
+    handle @api {
+        reverse_proxy https://veilbench-backend:8000 {
+            transport http {
+                tls_trust_pool file /etc/caddy/certs/ca.crt
+                tls_client_auth /etc/caddy/certs/edge.crt /etc/caddy/certs/edge.key
+                tls_server_name veilbench-backend
+            }
+        }
+    }
+
+    handle {
+        respond "Not found" 404
+    }
+}
+
+{$VEILBENCH_PARTY0_HOST} {
+    import common_security_headers
+
+    @founder_input {
+        method POST OPTIONS
+        path_regexp founder_input "^/sessions/[0-9a-fA-F-]{36}/input$"
+    }
+    handle @founder_input {
+        reverse_proxy https://veilbench-mpc-node0:8100 {
+            transport http {
+                tls_trust_pool file /etc/caddy/certs/ca.crt
+                tls_client_auth /etc/caddy/certs/edge.crt /etc/caddy/certs/edge.key
+                tls_server_name veilbench-mpc-node0
+            }
+        }
+    }
+
+    @health {
+        method GET
+        path /health
+    }
+    handle @health {
+        reverse_proxy https://veilbench-mpc-node0:8100 {
+            transport http {
+                tls_trust_pool file /etc/caddy/certs/ca.crt
+                tls_client_auth /etc/caddy/certs/edge.crt /etc/caddy/certs/edge.key
+                tls_server_name veilbench-mpc-node0
+            }
+        }
+    }
+
+    handle {
+        respond "Not found" 404
+    }
+}
+
+{$VEILBENCH_PARTY1_HOST} {
+    import common_security_headers
+
+    @founder_input {
+        method POST OPTIONS
+        path_regexp founder_input "^/sessions/[0-9a-fA-F-]{36}/input$"
+    }
+    handle @founder_input {
+        reverse_proxy https://veilbench-mpc-node1:8100 {
+            transport http {
+                tls_trust_pool file /etc/caddy/certs/ca.crt
+                tls_client_auth /etc/caddy/certs/edge.crt /etc/caddy/certs/edge.key
+                tls_server_name veilbench-mpc-node1
+            }
+        }
+    }
+
+    @health {
+        method GET
+        path /health
+    }
+    handle @health {
+        reverse_proxy https://veilbench-mpc-node1:8100 {
+            transport http {
+                tls_trust_pool file /etc/caddy/certs/ca.crt
+                tls_client_auth /etc/caddy/certs/edge.crt /etc/caddy/certs/edge.key
+                tls_server_name veilbench-mpc-node1
+            }
+        }
+    }
+
+    handle {
+        respond "Not found" 404
+    }
+}
+
+{$VEILBENCH_PARTY2_HOST} {
+    import common_security_headers
+
+    @founder_input {
+        method POST OPTIONS
+        path_regexp founder_input "^/sessions/[0-9a-fA-F-]{36}/input$"
+    }
+    handle @founder_input {
+        reverse_proxy https://veilbench-mpc-node2:8100 {
+            transport http {
+                tls_trust_pool file /etc/caddy/certs/ca.crt
+                tls_client_auth /etc/caddy/certs/edge.crt /etc/caddy/certs/edge.key
+                tls_server_name veilbench-mpc-node2
+            }
+        }
+    }
+
+    @health {
+        method GET
+        path /health
+    }
+    handle @health {
+        reverse_proxy https://veilbench-mpc-node2:8100 {
+            transport http {
+                tls_trust_pool file /etc/caddy/certs/ca.crt
+                tls_client_auth /etc/caddy/certs/edge.crt /etc/caddy/certs/edge.key
+                tls_server_name veilbench-mpc-node2
+            }
+        }
+    }
+
+    handle {
+        respond "Not found" 404
+    }
+}

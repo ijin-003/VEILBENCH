@@ -4,14 +4,20 @@ import secrets
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.config import settings
 from backend.models import BenchmarkSession
 from backend.mpc.distributed_coordinator import DistributedCoordinator
-from backend.mpc.exceptions import ConfigurationError, MPCTimeoutError, PartyDisconnectedError
+from backend.mpc.exceptions import (
+    ConfigurationError,
+    MPCExecutionFailed,
+    MPCRecoveryRequired,
+    MPCTimeoutError,
+    PartyDisconnectedError,
+)
 from backend.security.tokens import issue_founder_token
 from backend.services.database import get_database_session
 from backend.services.session_service import (
@@ -20,6 +26,7 @@ from backend.services.session_service import (
     create_session,
     get_session,
     refresh_submission_state,
+    recover_session,
 )
 
 router = APIRouter(prefix="/sessions")
@@ -110,7 +117,10 @@ def _session_or_404_error(error: Exception) -> HTTPException:
         return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Benchmark session was not found")
     if isinstance(error, SessionLifecycleError):
         return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
-    if isinstance(error, (MPCTimeoutError, PartyDisconnectedError, ConfigurationError)):
+    if isinstance(
+        error,
+        (MPCTimeoutError, PartyDisconnectedError, ConfigurationError, MPCExecutionFailed, MPCRecoveryRequired),
+    ):
         return HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="An MPC party is unavailable")
     return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Session operation failed")
 
@@ -118,9 +128,15 @@ def _session_or_404_error(error: Exception) -> HTTPException:
 @router.post("", response_model=CreatedSession, status_code=status.HTTP_201_CREATED)
 async def start_session(
     request: CreateSessionRequest,
+    response: Response,
     _: ManagementAccess,
     db: DatabaseSession,
 ) -> CreatedSession:
+    # This response contains three short-lived founder capabilities. Never let
+    # browsers, reverse proxies, or shared caches retain the invitation payload.
+    response.headers["Cache-Control"] = "no-store, no-cache, max-age=0, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     _coordinator()  # Fail before persisting an unusable session.
     ttl_seconds = min(request.ttl_minutes * 60, settings.SESSION_TTL_SECONDS)
     record = await create_session(db, ttl_seconds)
@@ -167,6 +183,23 @@ async def run_session(
         if record.state not in ("completed", "failed", "expired"):
             record = await refresh_submission_state(db, record, _coordinator())
         record = await compute_session(db, record, _coordinator())
+        return _as_view(record)
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise _session_or_404_error(error) from error
+
+
+@router.post("/{session_id}/recover", response_model=SessionView)
+async def recover_stuck_session(
+    session_id: str,
+    _: ManagementAccess,
+    db: DatabaseSession,
+) -> SessionView:
+    """Retry party shutdown and release a COMPUTING barrier only when confirmed."""
+    try:
+        record = await get_session(db, session_id)
+        record = await recover_session(db, record, _coordinator())
         return _as_view(record)
     except HTTPException:
         raise

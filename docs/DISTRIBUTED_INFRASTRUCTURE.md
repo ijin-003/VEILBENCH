@@ -15,7 +15,7 @@ In this model, each of the three startup founders is represented by a dedicated,
 - `veilbench-mpc-node1` (Founder 2 / Party 1)
 - `veilbench-mpc-node2` (Founder 3 / Party 2)
 
-Each container hosts an isolated instance of the VEILBENCH Party Service (`backend.mpc.party_service`), maintaining its own memory space, authentication token, lifecycle state machine, and communication channels.
+Each container hosts an isolated instance of the VEILBENCH Party Service (`backend.mpc.party_service`), maintaining its own memory space, authentication token, lifecycle state machine, and communication channels. Each party also has a distinct persistent SQLite replay-guard volume. That store contains only session identifiers, expiry timestamps, and lifecycle markers; it never stores founder salaries, capability tokens, MPyC shares, or aggregate results.
 
 ```
                       ┌──────────────────────────────────────────────┐
@@ -111,7 +111,7 @@ Each party strictly follows a deterministic 7-state lifecycle governed by `backe
 
 ## 4. TLS & Certificate Lifecycle Management
 
-Mutual TLS (mTLS) secures inter-party communications over the MPyC socket layer.
+Mutual TLS (mTLS) secures inter-party communications over the MPyC socket layer. The original local development party HTTPS listener used server-authenticated TLS plus a party-specific bearer control token. The Phase 5 production Compose profile additionally requires client certificates on party and backend HTTPS listeners: the coordinator uses its dedicated client identity, and Caddy uses a separate edge identity to proxy public founder-input requests. The local development Compose profile intentionally remains compatible with browser-to-party HTTPS without client certificates.
 
 ### 4.1 Certificate Hierarchy
 - **Certificate Authority (CA):** Self-signed root CA created for the session or cluster (`VEILBENCH-MPC-CA`).
@@ -135,6 +135,10 @@ Mutual TLS (mTLS) secures inter-party communications over the MPyC socket layer.
    - In an enterprise PKI, a Certificate Revocation List (CRL) or OCSP stapling would be queried.
 6. **Session Cleanup:**
    - Upon session termination (`POST /shutdown`), volatile memory holding inputs and temporary session state is purged.
+   - A durable tombstone remains in that party's SQLite state volume until the founder capability expires, preventing replay after shutdown or process restart.
+   - A background expiry task purges expired in-memory session data and removes expired replay guards.
+   - If a party restarts while a founder input was in memory, its persistent guard is marked `FAILED`; the old capability remains consumed and the coordinator requires a new session.
+   - The coordinator retries shutdown and keeps its persisted computation-admission barrier if cleanup cannot be confirmed. An authenticated recovery endpoint retries the cleanup; it does not force-clear the barrier.
 
 ---
 
@@ -152,4 +156,4 @@ The `docker-compose.yml` configures two isolated bridge networks:
 
 1. **Input Submission Timeout:** If a founder fails to submit their input within the timeout window (15s default), the session aborts and transitions to `FAILED`.
 2. **Computation Deadlock Prevention:** All peer connections have an explicit socket timeout. If an MPC process drops or hangs, `asyncio.wait_for` terminates the execution, kills orphaned child processes, and releases network sockets.
-3. **Graceful Shutdown:** The coordinator executes `/shutdown` on all surviving parties regardless of whether computation succeeded or failed, ensuring no lingering processes or exposed memory states.
+3. **Graceful Shutdown:** The coordinator waits for all three compute requests to settle, then retries `/shutdown` on parties that have not confirmed cleanup. A successful response also records a durable replay tombstone. If any party cannot be reached, the coordinator keeps the global computation barrier until authenticated recovery confirms all three parties are cleared.

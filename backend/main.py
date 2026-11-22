@@ -11,8 +11,12 @@ from backend.services.database import database
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    """Connect metadata storage without exposing a usable session API if unavailable."""
+    """Validate production settings and connect metadata storage before serving."""
+    if settings.ENVIRONMENT.lower() == "production":
+        settings.validate_production_configuration()
     await database.start()
+    if settings.ENVIRONMENT.lower() == "production" and not database.available:
+        raise RuntimeError("Production database did not become available")
     try:
         yield
     finally:
@@ -22,8 +26,9 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     description="Privacy-Preserving Startup Founder Salary Benchmarking System using MPyC",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None if settings.ENVIRONMENT.lower() == "production" else "/docs",
+    redoc_url=None if settings.ENVIRONMENT.lower() == "production" else "/redoc",
+    openapi_url=None if settings.ENVIRONMENT.lower() == "production" else "/openapi.json",
     lifespan=lifespan,
 )
 
@@ -31,9 +36,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-VEILBENCH-Admin-Token"],
 )
 
 # Register routers
@@ -50,5 +55,5 @@ async def root():
         "version": settings.VERSION,
         "status": "operational",
         "description": "Secure Multiparty Computation (SMC) Engine",
-        "docs": "/docs"
+        "docs": None if settings.ENVIRONMENT.lower() == "production" else "/docs"
     }

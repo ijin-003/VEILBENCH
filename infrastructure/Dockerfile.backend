@@ -1,26 +1,28 @@
-FROM python:3.11-slim
+FROM python:3.11-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+RUN groupadd --system --gid 10001 veilbench \
+    && useradd --system --uid 10001 --gid veilbench --home-dir /app veilbench
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+COPY backend/requirements-prod.txt ./requirements.txt
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
 COPY backend/ ./backend/
-COPY pyproject.toml .
+COPY alembic.ini ./alembic.ini
+COPY pyproject.toml ./pyproject.toml
 
-RUN mkdir -p /app/certs/api /app/certs/ca /app/certs/coordinator
+RUN mkdir -p /app/certs/ca /app/certs/api /app/certs/coordinator \
+    && chown -R veilbench:veilbench /app
 
+USER 10001:10001
 EXPOSE 8000
 
-# Local Compose uses a generated development CA. Production should terminate
-# externally managed TLS before this service and set equivalent HTTPS policy.
-CMD ["sh", "-c", "test -r /app/certs/api/api.crt && test -r /app/certs/api/api.key && test -r /app/certs/ca/ca.crt && exec uvicorn backend.main:app --host 0.0.0.0 --port 8000 --ssl-certfile /app/certs/api/api.crt --ssl-keyfile /app/certs/api/api.key --ssl-ca-certs /app/certs/ca/ca.crt"]
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 \
+    CMD python -c "import ssl,urllib.request; c=ssl.create_default_context(cafile='/app/certs/ca/ca.crt'); c.load_cert_chain('/app/certs/coordinator/coordinator.crt','/app/certs/coordinator/coordinator.key'); urllib.request.urlopen('https://localhost:8000/health/ready', context=c, timeout=3)" || exit 1
+
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--ssl-certfile", "/app/certs/api/api.crt", "--ssl-keyfile", "/app/certs/api/api.key", "--ssl-ca-certs", "/app/certs/ca/ca.crt"]

@@ -14,9 +14,17 @@ from typing import Any
 import httpx
 
 from backend.mpc.config import DEFAULT_PARTIES_COUNT, MPC_TIMEOUT_SECONDS
-from backend.mpc.exceptions import ConfigurationError, MPCTimeoutError, PartyDisconnectedError
+from backend.mpc.exceptions import (
+    ConfigurationError,
+    MPCExecutionFailed,
+    MPCRecoveryRequired,
+    MPCTimeoutError,
+    PartyDisconnectedError,
+)
 
 logger = logging.getLogger("veilbench.mpc.distributed_coordinator")
+CLEANUP_ATTEMPTS = 3
+CLEANUP_RETRY_DELAY_SECONDS = 0.25
 
 
 class DistributedCoordinator:
@@ -73,6 +81,7 @@ class DistributedCoordinator:
         path: str,
         *,
         compute_timeout: bool = False,
+        params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         try:
             response = await client.request(
@@ -80,6 +89,7 @@ class DistributedCoordinator:
                 f"{self.party_urls[party_id]}{path}",
                 headers=self._headers(party_id),
                 timeout=self.timeout * 3 if compute_timeout else self.timeout,
+                params=params,
             )
             response.raise_for_status()
             return response.json()
@@ -105,49 +115,126 @@ class DistributedCoordinator:
                 )
             )
 
-    async def execute_protocol(self, session_id: str) -> dict[str, Any]:
-        """Run the parties concurrently and return only the agreed aggregate."""
+    async def _cleanup_party_sessions(
+        self,
+        client: httpx.AsyncClient,
+        session_id: str,
+        expires_at: int | None,
+    ) -> None:
+        """Retry idempotent shutdown until every party confirms its tombstone."""
+        pending = set(range(DEFAULT_PARTIES_COUNT))
+        last_errors: dict[int, Exception] = {}
+        params = {"expires_at": expires_at} if expires_at is not None else None
+
+        for attempt in range(CLEANUP_ATTEMPTS):
+            results = await asyncio.gather(
+                *[
+                    self._request(
+                        client,
+                        "POST",
+                        party_id,
+                        f"/sessions/{session_id}/shutdown",
+                        params=params,
+                    )
+                    for party_id in sorted(pending)
+                ],
+                return_exceptions=True,
+            )
+            for party_id, result in zip(sorted(pending), results):
+                if isinstance(result, BaseException):
+                    if isinstance(result, Exception):
+                        last_errors[party_id] = result
+                else:
+                    pending.discard(party_id)
+                    last_errors.pop(party_id, None)
+
+            if not pending:
+                return
+            if attempt + 1 < CLEANUP_ATTEMPTS:
+                await asyncio.sleep(CLEANUP_RETRY_DELAY_SECONDS * (attempt + 1))
+
+        logger.error(
+            "Could not confirm MPC session cleanup for session %s; parties=%s",
+            session_id,
+            sorted(pending),
+        )
+        raise MPCRecoveryRequired(
+            f"MPC party cleanup could not be confirmed for parties {sorted(pending)}"
+        ) from next(iter(last_errors.values()), None)
+
+    async def shutdown_session(self, session_id: str, expires_at: int | None = None) -> None:
+        """Retry cleanup independently, including after a coordinator restart."""
+        async with self._client() as client:
+            await self._cleanup_party_sessions(client, session_id, expires_at)
+
+    async def execute_protocol(
+        self, session_id: str, expires_at: int | None = None
+    ) -> dict[str, Any]:
+        """Run parties concurrently, confirm cleanup, and return only the aggregate."""
+        protocol_error: BaseException | None = None
+        aggregate: dict[str, Any] | None = None
+
         async with self._client() as client:
             try:
-                party_results = list(
-                    await asyncio.gather(
-                        *[
-                            self._request(
-                                client,
-                                "POST",
-                                party_id,
-                                f"/sessions/{session_id}/compute",
-                                compute_timeout=True,
-                            )
-                            for party_id in range(DEFAULT_PARTIES_COUNT)
-                        ]
-                    )
-                )
-                sums = [result["aggregate_sum"] for result in party_results]
-                averages = [result["average_salary"] for result in party_results]
-                for party_id, result in enumerate(party_results):
-                    if (result.get("session_id") != session_id
-                            or result.get("party_id") != party_id
-                            or result.get("parties_count") != 3
-                            or result.get("threshold") != 1):
-                        raise ConfigurationError("Unexpected MPC result identity or parameters")
-                if len(set(sums)) != 1 or len(set(averages)) != 1:
-                    raise ConfigurationError("MPC parties returned inconsistent aggregate results")
-                return {
-                    "parties_count": DEFAULT_PARTIES_COUNT,
-                    "aggregate_sum": sums[0],
-                    "average_salary": averages[0],
-                }
-            finally:
-                # Clear volatile inputs regardless of outcome. Cleanup errors
-                # are logged but do not replace the original protocol failure.
-                cleanup = await asyncio.gather(
+                results = await asyncio.gather(
                     *[
-                        self._request(client, "POST", party_id, f"/sessions/{session_id}/shutdown")
+                        self._request(
+                            client,
+                            "POST",
+                            party_id,
+                            f"/sessions/{session_id}/compute",
+                            compute_timeout=True,
+                        )
                         for party_id in range(DEFAULT_PARTIES_COUNT)
                     ],
                     return_exceptions=True,
                 )
-                for party_id, result in enumerate(cleanup):
-                    if isinstance(result, Exception):
-                        logger.warning("Party %d did not confirm session cleanup", party_id)
+                failures = [item for item in results if isinstance(item, BaseException)]
+                if failures:
+                    protocol_error = failures[0]
+                else:
+                    party_results = list(results)
+                    try:
+                        sums = [result["aggregate_sum"] for result in party_results]
+                        averages = [result["average_salary"] for result in party_results]
+                        for party_id, result in enumerate(party_results):
+                            if (
+                                result.get("session_id") != session_id
+                                or result.get("party_id") != party_id
+                                or result.get("parties_count") != DEFAULT_PARTIES_COUNT
+                                or result.get("threshold") != 1
+                            ):
+                                raise ConfigurationError(
+                                    "Unexpected MPC result identity or parameters"
+                                )
+                        if len(set(sums)) != 1 or len(set(averages)) != 1:
+                            raise ConfigurationError(
+                                "MPC parties returned inconsistent aggregate results"
+                            )
+                        aggregate = {
+                            "parties_count": DEFAULT_PARTIES_COUNT,
+                            "aggregate_sum": sums[0],
+                            "average_salary": averages[0],
+                        }
+                    except (KeyError, TypeError, ValueError, ConfigurationError) as error:
+                        protocol_error = error
+            except BaseException as error:
+                protocol_error = error
+
+            # Do not start cleanup until every compute request has settled. This
+            # prevents a fast failure from racing shutdown against other parties
+            # that are still running their MPyC subprocesses.
+            try:
+                await self._cleanup_party_sessions(client, session_id, expires_at)
+            except MPCRecoveryRequired:
+                raise
+
+        if protocol_error is not None:
+            if isinstance(protocol_error, asyncio.CancelledError):
+                raise protocol_error
+            raise MPCExecutionFailed(
+                "MPC computation failed; all parties confirmed session cleanup"
+            ) from protocol_error
+        if aggregate is None:
+            raise MPCExecutionFailed("MPC computation returned no aggregate result")
+        return aggregate

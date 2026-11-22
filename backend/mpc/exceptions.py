@@ -24,3 +24,11 @@ class MPCTimeoutError(MPCError):
 class ConfigurationError(MPCError):
     """Raised when party configuration violates honest majority or cryptographic constraints."""
     pass
+
+
+class MPCExecutionFailed(MPCError):
+    """The MPC attempt failed, but all parties confirmed volatile-state cleanup."""
+
+
+class MPCRecoveryRequired(MPCError):
+    """Party cleanup could not be confirmed; new computation must remain blocked."""

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models import BenchmarkSession, SessionState
 from backend.mpc.distributed_coordinator import DistributedCoordinator
+from backend.mpc.exceptions import MPCExecutionFailed
 
 
 class SessionLifecycleError(RuntimeError):
@@ -53,8 +54,21 @@ async def refresh_submission_state(
         return record
     await _ensure_not_expired(db, record)
     statuses = await coordinator.get_statuses(record.id)
+    terminal_party_states = {"FAILED", "SHUTDOWN", "EXPIRED"}
+    if any(str(item.get("state", "")).upper() in terminal_party_states for item in statuses):
+        record.state = SessionState.FAILED.value
+        record.failure_reason = (
+            "An MPC party lost its volatile session state. Create a new benchmark session."
+        )
+        await db.commit()
+        await db.refresh(record)
+        return record
+
     submitted = sorted(
-        status["party_id"] for status in statuses if status.get("input_submitted") is True
+        item["party_id"]
+        for item in statuses
+        if item.get("input_submitted") is True
+        and str(item.get("state", "")).upper() in {"WAITING_FOR_PARTICIPANTS", "READY"}
     )
     record.submitted_party_ids = submitted
     if len(submitted) == 3 and record.state == SessionState.CREATED.value:
@@ -91,10 +105,19 @@ async def compute_session(
     record.state = SessionState.COMPUTING.value
     await db.commit()
     try:
-        result = await coordinator.execute_protocol(record.id)
+        result = await coordinator.execute_protocol(
+            record.id, expires_at=int(record.expires_at.timestamp())
+        )
+    except MPCExecutionFailed:
+        # All three parties confirmed cleanup, so the failed attempt no longer
+        # needs to hold the global computation-admission barrier.
+        record.state = SessionState.FAILED.value
+        record.failure_reason = "MPC computation failed; all party sessions were cleared"
+        await db.commit()
+        raise
     except BaseException:
-        # Fail closed: keep the admission barrier until an operator has stopped
-        # all old party processes. A timeout is not proof that peers stopped.
+        # Fail closed if cleanup could not be confirmed or the coordinator was
+        # interrupted. An administrator can retry the idempotent shutdown.
         record.failure_reason = "MPC recovery required before another computation"
         await db.commit()
         raise
@@ -103,6 +126,32 @@ async def compute_session(
     record.average_salary = float(result["average_salary"])
     record.state = SessionState.COMPLETED.value
     record.failure_reason = None
+    await db.commit()
+    await db.refresh(record)
+    return record
+
+
+async def recover_session(
+    db: AsyncSession, record: BenchmarkSession, coordinator: DistributedCoordinator
+) -> BenchmarkSession:
+    """Release a stuck COMPUTING barrier only after every party confirms shutdown."""
+    await db.execute(text("SELECT pg_advisory_xact_lock(74012001)"))
+    await db.refresh(record)
+    if record.state != SessionState.COMPUTING.value:
+        await db.rollback()
+        raise SessionLifecycleError("Only a session awaiting MPC recovery can be recovered")
+
+    try:
+        await coordinator.shutdown_session(
+            record.id, expires_at=int(record.expires_at.timestamp())
+        )
+    except BaseException:
+        record.failure_reason = "MPC recovery is still required; party cleanup was not confirmed"
+        await db.commit()
+        raise
+
+    record.state = SessionState.FAILED.value
+    record.failure_reason = "MPC session recovered after all parties confirmed cleanup"
     await db.commit()
     await db.refresh(record)
     return record
