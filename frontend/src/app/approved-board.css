@@ -4,10 +4,10 @@
 :root { --board-cream:#f8f1e6; --board-red:#e60f21; --board-ink:#151313; }
 .vb-auth.vb-auth-v2, .r4-reactor-root, .d4-root { --board-display:Impact,"Arial Narrow","Franklin Gothic Heavy",Arial,sans-serif; }
 .vb-auth.vb-auth-v2 { background:var(--board-cream); color:var(--board-ink); }
-.vb-auth.vb-auth-v2 .vb-auth-art { background:var(--board-red); position:relative; isolation:isolate; overflow:hidden; }
-.vb-auth.vb-auth-v2 .vb-auth-art::before { content:"";position:absolute;inset:-18% -20%;background:#121111;clip-path:polygon(0 0,31% 0,68% 90%,0 69%);z-index:1;opacity:.98;pointer-events:none; }
-.vb-auth.vb-auth-v2 .vb-auth-art::after {content:""; position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(136deg,transparent 48%,#f9f0e2 48.4%,#f9f0e2 50%,transparent 50.4%);opacity:.78}
-.vb-auth.vb-auth-v2 .vb-auth-motion { z-index:2; }
+.vb-auth.vb-auth-v2 .vb-auth-motion { background:var(--board-red); position:relative; isolation:isolate; overflow:hidden; }
+.vb-auth.vb-auth-v2 .vb-auth-motion::before { content:"";position:absolute;inset:-18% -20%;background:#121111;clip-path:polygon(0 0,31% 0,68% 90%,0 69%);z-index:1;opacity:.98;pointer-events:none; }
+.vb-auth.vb-auth-v2 .vb-auth-motion::after {content:""; position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(136deg,transparent 48%,#f9f0e2 48.4%,#f9f0e2 50%,transparent 50.4%);opacity:.78}
+.vb-auth.vb-auth-v2 .vb-auth-motion-inner { position:relative; z-index:2; }
 .vb-auth.vb-auth-v2 .vb-auth-vector-ring {border-color:rgba(255,246,232,.6)}
 .vb-auth.vb-auth-v2 .vb-auth-emblem { background:var(--board-cream);color:var(--board-ink);box-shadow:12px 14px 0 #151313, -9px -10px 0 rgba(255,255,255,.2); transform:rotate(-12deg); }
 .vb-auth.vb-auth-v2 .vb-auth-art-caption strong { font-family:var(--board-display);font-style:italic;letter-spacing:-.045em;text-shadow:4px 5px 0 #151313; }
@@ -87,7 +87,7 @@
  .r4-reactor-root .vb-board-results-silhouettes span{font-size:14px;padding:6px}
  .r4-reactor-root .vb-board-result-row strong{font-size:clamp(32px,10vw,52px)}
  .r4-reactor-root .vb-board-results-data h2{font-size:clamp(29px,9vw,42px)}
- .vb-auth.vb-auth-v2 .vb-auth-art::before{opacity:.65}
+ .vb-auth.vb-auth-v2 .vb-auth-motion::before{opacity:.65}
 }
 @media(prefers-reduced-motion:reduce){
  .r4-reactor-root .r4-results.vb-board-results{animation:none}
