@@ -7,6 +7,7 @@ import {
   ShieldCheck, X,
 } from "lucide-react";
 import AccountInvite from "./AccountInvite";
+import ReactorStage from "./ReactorStage";
 import { ProtocolWalkthrough } from "./LearningCenter";
 
 type HealthData = {
@@ -37,91 +38,6 @@ const POLL_INTERVAL_MS = 4000;
 const FINISHED = new Set(["completed", "failed", "expired"]);
 const numberFormat = new Intl.NumberFormat("en-PK", { maximumFractionDigits: 2 });
 const PARTY_IDS = [0, 1, 2] as const;
-
-function ChamberScene({ submitted, stage }: { submitted: ReadonlySet<number>; stage: string }) {
-  const running = stage === "computing";
-  const finished = stage === "completed";
-  const armed = stage === "ready" || running || finished;
-  const engaged = submitted.size === 3;
-
-  return (
-    <div className={`ch-visual ch-visual--${stage}`}>
-      <svg className="ch-machine-svg" viewBox="0 0 1160 490" xmlns="http://www.w3.org/2000/svg" role="img" aria-label={`${submitted.size} of 3 founder capsules received. Machine ${finished ? "completed" : running ? "computing" : armed ? "ready" : "waiting"}.`}>
-        <defs>
-          <linearGradient id="ch-metal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#282329"/><stop offset=".5" stopColor="#100e13"/><stop offset="1" stopColor="#39282e"/></linearGradient>
-          <linearGradient id="ch-shell" x1="0" x2="1"><stop offset="0" stopColor="#251c23"/><stop offset=".5" stopColor="#4d3037"/><stop offset="1" stopColor="#1a141a"/></linearGradient>
-          <linearGradient id="ch-beam" x1="0" x2="1"><stop offset="0" stopColor="#ef2639" stopOpacity=".05"/><stop offset=".5" stopColor="#ef2639"/><stop offset="1" stopColor="#f6d9bc" stopOpacity=".05"/></linearGradient>
-          <radialGradient id="ch-core"><stop offset="0" stopColor="#ffe3c9"/><stop offset=".24" stopColor="#f35a5f"/><stop offset=".65" stopColor="#bd132a"/><stop offset="1" stopColor="#350d1b"/></radialGradient>
-          <filter id="ch-softglow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="8"/></filter>
-        </defs>
-
-        {/* Angular frame; deliberate negative space around the machine. */}
-        <path d="M16 34H315M16 34V126M1144 34H1000M1144 34V126M16 450H255M16 450V404M1144 450H1000M1144 450V405" stroke="#7f626b" strokeWidth="1.5" fill="none" opacity=".52"/>
-        <path d="M25 245H115M1074 245H1135" stroke="#e83c4b" strokeWidth="2" opacity=".4"/>
-
-        {/* The three tracks remain visible in every state. */}
-        {PARTY_IDS.map((partyId) => {
-          const y = 121 + partyId * 126;
-          const received = submitted.has(partyId);
-          return (
-            <g key={partyId} className={`ch-track ${received ? "ch-track--received" : ""}`}>
-              <title>{`Partner ${partyId + 1}: ${received ? "submission received and sealed" : "awaiting submission"}`}</title>
-              <text x="49" y={y - 42} fill="#ad9198" fontSize="12" fontWeight="800" letterSpacing="2.6">PARTNER 0{partyId + 1}</text>
-              <text x="49" y={y + 50} fill={received ? "#f8dfce" : "#90767f"} fontSize="11" fontWeight="800" letterSpacing="2.2">{received ? "INPUT SECURED" : "AWAITING INPUT"}</text>
-              <path d={`M90 ${y - 20}H620M90 ${y + 20}H620`} stroke="#65515a" strokeWidth="2" opacity=".58"/>
-              <path d={`M265 ${y}H598`} stroke={received ? "#f54557" : "#5a3e49"} strokeWidth="3" strokeDasharray="8 14" className={received ? "ch-track-energy" : ""}/>
-              {[311, 395, 479, 563].map((x) => <path key={x} d={`M${x} ${y-26}v52`} stroke="#70505d" strokeOpacity=".35"/>) }
-
-              {/* The seal and transport animation is triggered only by confirmed submissions. */}
-              <g transform={`translate(109 ${y})`}>
-                <g className={received ? "ch-capsule ch-capsule--sent" : "ch-capsule ch-capsule--waiting"}>
-                  <rect x="-37" y="-22" width="154" height="44" rx="21" fill="url(#ch-shell)" stroke={received ? "#ff6f73" : "#bc8a89"} strokeWidth="2"/>
-                  <rect x="-28" y="-14" width="124" height="28" rx="13" fill="#0b0a0c" stroke="#7e666c" strokeWidth="1"/>
-                  <rect x="58" y="-13" width="32" height="26" rx="6" fill={received ? "#f42a43" : "#69434d"}/>
-                  <path d="M-17 -20v40M-4 -20v40" stroke="#f0d6c7" strokeOpacity=".34" strokeWidth="2"/>
-                  <path d="M-9 0H45" stroke={received ? "#f33a4d" : "#b88b8d"} strokeWidth="3"/>
-                  <path d="M101 -9h4l7 9-7 9h-4" fill="none" stroke="#f3d2bb" strokeWidth="2"/>
-                  <text x="21" y="-6" textAnchor="middle" fill="#eee0d5" fontSize="8" fontWeight="900" letterSpacing="1">SEALED INPUT</text>
-                </g>
-              </g>
-
-              {/* Filled port signifies confirmed delivery, not a visible salary. */}
-              <g className={`ch-port ${received ? "ch-port--received" : ""}`}>
-                <rect x="589" y={y - 31} width="110" height="62" rx="7" fill="#0a090e" stroke={received ? "#ee3649" : "#57414a"} strokeWidth="3"/>
-                <rect x="601" y={y - 18} width="78" height="36" rx="14" fill={received ? "#8d182a" : "#181018"} stroke={received ? "#f67a7f" : "#4e3b42"} strokeWidth="2"/>
-                <path d={`M695 ${y - 24}l17 -10v68l-17 -10`} fill="url(#ch-metal)" stroke="#82636c" strokeWidth="2"/>
-                {received && <g className="ch-port-lock"><rect x="630" y={y - 9} width="16" height="15" rx="2" fill="#ffe9d2"/><path d={`M634 ${y - 8}v-5a4 4 0 0 1 8 0v5`} fill="none" stroke="#ffe9d2" strokeWidth="3"/></g>}
-              </g>
-            </g>
-          );
-        })}
-
-        {/* Machine housing */}
-        <g className={`ch-machinery ${engaged ? "ch-machinery--loaded" : ""} ${armed ? "ch-machinery--armed" : ""} ${running ? "ch-machinery--running" : ""} ${finished ? "ch-machinery--finished" : ""}`}>
-          <path d="M720 45H1007L1090 137V345L1007 437H720L696 393V90Z" fill="url(#ch-metal)" stroke="#bd8d88" strokeWidth="3"/>
-          <path d="M739 66H996L1068 148V333L996 416H739L716 383V100Z" fill="#130f16" stroke="#6b505b" strokeWidth="2"/>
-          <path d="M746 80H979L1040 155V325L979 403H746" fill="none" stroke="#a37b79" strokeOpacity=".5" strokeWidth="2"/>
-          <path d="M732 105L767 130M732 375L767 350M1012 123L1047 94M1012 361L1047 391" stroke="#f34755" strokeOpacity=".5" strokeWidth="5"/>
-          <g className="ch-machine-rings" transform="translate(885 242)">
-            <circle r="132" fill="#09090d" stroke="#473039" strokeWidth="7"/>
-            <circle r="121" fill="none" stroke="#a88278" strokeOpacity=".48" strokeDasharray="7 19" strokeWidth="4"/>
-            <g className="ch-rotor"><circle r="105" fill="none" stroke="#f0444f" strokeWidth="5" strokeDasharray="120 33 40 79 35 112" opacity=".8"/><path d="M0 -105V-123M105 0h18M0 105v18M-105 0h-18" stroke="#fff0df" strokeWidth="5"/></g>
-            <g className="ch-rotor ch-rotor--reverse"><circle r="83" fill="none" stroke="#c6a8a0" strokeWidth="2" strokeDasharray="9 11"/><path d="M-62 -55H62L79 -28V28L62 55H-62L-79 28V-28Z" fill="none" stroke="#a58a87" strokeOpacity=".55" strokeWidth="3"/></g>
-            <circle className="ch-core-aura" r="62" fill="url(#ch-core)" opacity=".36" filter="url(#ch-softglow)"/>
-            <circle className="ch-core" r="58" fill={engaged ? "url(#ch-core)" : "#21151e"} stroke={engaged ? "#ffb0a4" : "#765a61"} strokeWidth="3"/>
-            <path d="M-22 -17L0 -38L22 -17V19L0 39L-22 19Z" fill="none" stroke={engaged ? "#fff4e0" : "#90787a"} strokeWidth="4"/>
-            <circle r="8" fill={engaged ? "#fff2de" : "#755c60"}/>
-          </g>
-          <g className="ch-shutters"><path d="M758 240L830 194V289L758 242Z" fill="#49343c" stroke="#e06b70" strokeWidth="2"/><path d="M1016 240L943 194V289L1016 242Z" fill="#49343c" stroke="#e06b70" strokeWidth="2"/></g>
-          <g className="ch-machine-lock"><path d="M802 83h165l-23 30H826Z" fill="#e52e42"/><path d="M802 401h165l-23 -30H826Z" fill="#e52e42"/></g>
-        </g>
-        <path d="M1042 229h75M1042 257h75" stroke="#a17a7f" strokeOpacity=".7" strokeWidth="2"/>
-        <path d="M1084 217l19 26-19 26" fill="none" stroke="#f04453" strokeWidth="3"/>
-      </svg>
-      <div className="ch-visual-hint" aria-hidden="true">SECURE MULTIPARTY COMPUTATION <span>///</span> THREE-PARTY CHAMBER</div>
-    </div>
-  );
-}
 
 export default function AdminDashboard({ token }: { token: string }) {
   const [health, setHealth] = useState<HealthData | null>(null);
@@ -326,9 +242,9 @@ export default function AdminDashboard({ token }: { token: string }) {
 
   const headline = complete ? "AGGREGATE COMPLETE" :
     isComputing ? "SECURE COMPUTATION IN PROGRESS" :
-    fault ? (state === "expired" ? "SESSION EXPIRED" : "CHAMBER ERROR") :
+    fault ? (state === "expired" ? "SESSION EXPIRED" : "REACTOR ERROR") :
     !session ? "AWAITING INITIALIZATION" :
-    state === "ready" && submittedCount === 3 ? "ALL CAPSULES SECURED" :
+    state === "ready" && submittedCount === 3 ? "ALL CARTRIDGES DOCKED" :
     `${submittedCount} OF 3 INPUTS SECURED`;
 
   return (
@@ -337,8 +253,8 @@ export default function AdminDashboard({ token }: { token: string }) {
       <div className="ch-inner">
         <header className="ch-header">
           <div className="ch-heading">
-            <span className="ch-kicker">OPERATION 02 <b>/</b> THREE-PARTY MPC</span>
-            <h1>THE <em>CHAMBER.</em></h1>
+            <span className="ch-kicker">PROTOCOL / 02 <b>/</b> THREE-PARTY MPC</span>
+            <h1>THE <em>REACTOR.</em></h1>
           </div>
           <div className="ch-header-tools">
             <div className={`ch-connection ${isConnected ? "ch-connection--online" : ""}`} role="status">
@@ -350,8 +266,8 @@ export default function AdminDashboard({ token }: { token: string }) {
           </div>
         </header>
 
-        <section className="ch-stage" aria-label="Secure three-party submission chamber">
-          <ChamberScene submitted={submitted} stage={isComputing ? "computing" : state} />
+        <section className="ch-stage" aria-label="Secure three-party reactor">
+          <ReactorStage submitted={submitted} stage={isComputing ? "computing" : state} />
           <div className="ch-stage-counter" aria-hidden="true"><span>{String(submittedCount).padStart(2, "0")}</span><small>/ 03</small></div>
           {complete && resultOpen && session?.result && (
             <div className="ch-result" role="region" aria-label="Computed aggregate results">
@@ -366,7 +282,7 @@ export default function AdminDashboard({ token }: { token: string }) {
         <div className="ch-console">
           <div className="ch-console-status" role="status" aria-live="polite">
             <div className={`ch-status-light ${complete ? "ch-status-light--complete" : ""} ${isComputing ? "ch-status-light--running" : ""}`} />
-            <div><span className="ch-status-index">CHAMBER STATUS</span><strong>{headline}</strong></div>
+            <div><span className="ch-status-index">REACTOR STATUS</span><strong>{headline}</strong></div>
           </div>
           <div className="ch-command-group">
             {session && <button type="button" className="ch-refresh" onClick={() => void refreshSession()} disabled={busy} title="Refresh live submission status" aria-label="Refresh submission status"><RefreshCw size={18} aria-hidden="true" /></button>}
@@ -379,7 +295,7 @@ export default function AdminDashboard({ token }: { token: string }) {
             ) : fault ? (
               <button type="button" className="ch-main-action" onClick={() => setDrawerOpen(true)}><CircleAlert size={17}/> SESSION OPTIONS <ArrowRight aria-hidden="true"/></button>
             ) : (
-              <button type="button" className="ch-main-action" disabled><LockKeyhole size={17}/> {isComputing ? "COMPUTING…" : "WAITING FOR CAPSULES"}</button>
+              <button type="button" className="ch-main-action" disabled><LockKeyhole size={17}/> {isComputing ? "COMPUTING…" : "WAITING FOR CARTRIDGES"}</button>
             )}
           </div>
         </div>
@@ -388,7 +304,7 @@ export default function AdminDashboard({ token }: { token: string }) {
           {session?.failure_reason && <p role="alert" className="ch-error">{session.failure_reason}</p>}
           {pollWarning && <p role="status" className="ch-warning">Sync warning: {pollWarning}</p>}
         </div>}
-        <p className="ch-privacy-note"><ShieldCheck size={13} aria-hidden="true"/> Capsule transfer is a visual representation of submission status; the coordinator never receives an individual salary.</p>
+        <p className="ch-privacy-note"><ShieldCheck size={13} aria-hidden="true"/> Cartridge docking represents confirmed submission status. Individual salaries are sent directly to assigned parties, not this coordinator.</p>
       </div>
 
       {drawerOpen && <div className="ch-drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setDrawerOpen(false); }}>
@@ -416,7 +332,7 @@ export default function AdminDashboard({ token }: { token: string }) {
               <details className="ch-drawer-guide"><summary>HOW THE THREE-PARTY COMPUTATION WORKS</summary><div><ProtocolWalkthrough /></div></details>
             </section>
           </div>
-          <div className="ch-drawer-foot"><span><LockKeyhole size={13}/> NO INDIVIDUAL SALARIES SHOWN</span></div>
+          <div className="ch-drawer-foot"><span><LockKeyhole size={13}/> INDIVIDUAL SALARIES NEVER DISPLAYED</span></div>
         </section>
       </div>}
     </main>
