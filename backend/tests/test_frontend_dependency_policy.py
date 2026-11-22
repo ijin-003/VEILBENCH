@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 
@@ -43,7 +44,9 @@ def test_health_check_effect_uses_async_request_without_stateful_callback():
     assert "requestHealth()" in manual_callback
     assert "requestHealth(controller.signal)" in effect
     assert "void checkHealth()" not in effect
-    assert ".then((data)" in effect
+    # The callback parameter name is irrelevant to the async effect invariant.
+    assert re.search(r"\.then\(\([a-zA-Z_$][\w$]*\)\s*=>", effect)
+    assert "setHealth(" in effect
     assert "controller.abort()" in effect
 
 
