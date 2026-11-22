@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { LockKeyhole, ArrowRight, CheckCircle2 } from "lucide-react";
 import ReactorStage from "../ReactorStage";
+import ApprovedResultArt from "../ApprovedResultArt";
 import { PrivateMark } from "../submit/[sessionId]/[partyId]/FounderSubmissionForm";
 import "../approved-board.css";
 
@@ -71,9 +72,7 @@ export default function DesignPreviewPage() {
         <header className="vb-review-label"><span>03</span><h2>RESULT / REVEAL</h2><small>PUBLIC AGGREGATE ONLY — SYNTHETIC EXAMPLE</small></header>
         <div className="r4-reactor-root vb-review-result">
           <section className="r4-results vb-board-results" aria-label="Illustrative computed aggregate">
-            <div className="vb-board-results-art" aria-hidden="true">
-              <div className="vb-board-results-silhouettes"><span>01 / SECURED</span><span>02 / SECURED</span><span>03 / SECURED</span></div>
-            </div>
+            <div className="vb-board-results-art" aria-hidden="true"><ApprovedResultArt /></div>
             <div className="vb-board-results-data">
               <h2>COMPUTATION COMPLETE.</h2>
               <p>AGGREGATE RESULTS ONLY</p>
