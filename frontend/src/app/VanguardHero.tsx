@@ -23,48 +23,48 @@ export default function VanguardHero({ onStart }: Props) {
     const closePanel = () => setPanel(null);
 
     return (
-        <main className= "vanguard" >
-        <div className="vanguard-art" aria - hidden="true" />
-            <div className="vanguard-grain" aria - hidden="true" />
+        <main className="vanguard">
+        <div className="vanguard-art" aria-hidden="true" />
+            <div className="vanguard-grain" aria-hidden="true" />
 
             {/* Accessible controls aligned with the desktop artwork */ }
-                < nav className = "vanguard-nav" aria - label="Main navigation" >
+                < nav className = "vanguard-nav" aria-label="Main navigation" >
                     <button
           type="button"
     className = "vanguard-nav-button"
-    aria - label="Home"
+    aria-label="Home"
     title = "Home"
     onClick = { closePanel }
         >
-        <Home aria - hidden="true" />
+        <Home aria-hidden="true" />
             </button>
             < button
     type = "button"
     className = "vanguard-nav-button"
-    aria - label="How VEILBENCH works"
+    aria-label="How VEILBENCH works"
     title = "How it works"
     onClick = {() => setPanel("process")
 }
         >
-    <Layers3 aria - hidden="true" />
+    <Layers3 aria-hidden="true" />
         </button>
         < button
 type = "button"
 className = "vanguard-nav-button"
-aria - label="Security information"
+aria-label="Security information"
 title = "Security"
 onClick = {() => setPanel("security")}
         >
-    <ShieldCheck aria - hidden="true" />
+    <ShieldCheck aria-hidden="true" />
         </button>
         < button
 type = "button"
 className = "vanguard-nav-button"
-aria - label="About VEILBENCH"
+aria-label="About VEILBENCH"
 title = "About"
 onClick = {() => setPanel("about")}
         >
-    <Info aria - hidden="true" />
+    <Info aria-hidden="true" />
         </button>
         </nav>
 
@@ -73,10 +73,10 @@ onClick = {() => setPanel("about")}
         type="button"
 className = "vanguard-start"
 onClick = { onStart }
-aria - label="Start VEILBENCH — sign in or activate account"
+aria-label="Start VEILBENCH — sign in or activate account"
     >
     <span className="vanguard-start-mobile" >
-        START < ArrowRight aria - hidden="true" size = { 23} />
+        START < ArrowRight aria-hidden="true" size = { 23} />
             </span>
             </button>
 
@@ -96,7 +96,7 @@ onClick = { onStart }
         </button>
         </div>
 
-        < span className = "vanguard-index" aria - hidden="true" >
+        < span className = "vanguard-index" aria-hidden="true" >
             <span className="active" />
                 <span />
                 < span />
@@ -117,15 +117,15 @@ onClick = { onStart }
     <section
             className="vanguard-panel"
 role = "dialog"
-aria - modal="true"
-aria - labelledby="vanguard-panel-title"
+aria-modal="true"
+aria-labelledby="vanguard-panel-title"
     >
     <div className="vanguard-panel-top" >
         <span>VEILBENCH // SYSTEM INFORMATION</span>
         < button
 type = "button"
 onClick = { closePanel }
-aria - label="Close information panel"
+aria-label="Close information panel"
     >
     <X size={ 23 } />
         </button>
