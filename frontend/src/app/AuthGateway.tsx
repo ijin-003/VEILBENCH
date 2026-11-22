@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { CSSProperties, FormEvent, PointerEvent } from "react";
 import {
   ArrowLeft,
@@ -44,10 +44,6 @@ export default function AuthGateway({
 }: AuthGatewayProps) {
   const [showPassword, setShowPassword] = useState(false);
   const graphicRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setShowPassword(false);
-  }, [activate]);
 
   function moveGraphic(event: PointerEvent<HTMLElement>) {
     if (event.pointerType !== "mouse" || !graphicRef.current) return;
@@ -145,7 +141,7 @@ export default function AuthGateway({
           </form>
 
           <div className="vb-auth-footactions">
-            <button type="button" disabled={busy} onClick={onToggleActivate} className="vb-auth-switch">
+            <button type="button" disabled={busy} onClick={() => { setShowPassword(false); onToggleActivate(); }} className="vb-auth-switch">
               {activate ? "ALREADY ACTIVATED? SIGN IN" : "HAVE AN INVITATION? ACTIVATE"}
               <ArrowRight size={15} aria-hidden="true" />
             </button>
