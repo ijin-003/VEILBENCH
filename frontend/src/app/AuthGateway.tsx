@@ -11,6 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { GuidedTour } from "./LearningCenter";
+import "./approved-board.css";
 
 type AuthGatewayProps = {
   activate: boolean;
@@ -93,7 +94,7 @@ export default function AuthGateway({
           <div className="vb-auth-slice slice-c" aria-hidden="true" />
           <div className="vb-auth-art-caption" aria-hidden="true">
             <span>IDENTITY //</span>
-            <strong>{activate ? "INITIALIZE." : "VERIFIED."}</strong>
+            <strong>{activate ? "INITIALIZE." : "PRIVATE ACCESS."}</strong>
           </div>
           <span className="vb-auth-motion-tag" aria-hidden="true">VEILBENCH / ACCESS PROTOCOL</span>
           <span className="vb-auth-motion-bottom" aria-hidden="true">NO INDIVIDUAL INPUTS ON DISPLAY</span>
@@ -111,10 +112,10 @@ export default function AuthGateway({
         <div className="vb-auth-content">
           <div className="vb-auth-kicker"><span className="vb-auth-pulse" /> AUTHENTICATION / {activate ? "02" : "01"}</div>
           <div className="vb-auth-heading-wrap">
-            <span className="vb-auth-heading-shadow" aria-hidden="true">{activate ? "ACTIVATE" : "ENTER"}</span>
-            <h1>{activate ? "ACTIVATE" : "ENTER"}<em>{activate ? "ACCOUNT." : "SYSTEM."}</em></h1>
+            <span className="vb-auth-heading-shadow" aria-hidden="true">{activate ? "ACTIVATE" : "ACCESS"}</span>
+            <h1>{activate ? "ACTIVATE" : "ACCESS"}<em>{activate ? "ACCOUNT." : "GATEWAY."}</em></h1>
           </div>
-          <p className="vb-auth-intro">{activate ? "Accept your invitation. Establish your access." : "Your credentials. Your secure workspace."}</p>
+          <p className="vb-auth-intro">{activate ? "Accept your private invitation to continue." : "AUTHENTICATED ACCESS ONLY."}</p>
 
           <form className="vb-auth-form" onSubmit={onSubmit}>
             <label className="vb-auth-field">
