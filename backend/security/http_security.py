@@ -63,10 +63,11 @@ class AuthThrottle:
                 self._prune(timestamp)
             retry_after = 0
             for key, limit in limits:
-                hits = self._hits.setdefault(key, deque())
-                while hits and hits[0] <= timestamp - self.WINDOW_SECONDS:
-                    hits.popleft()
-                if len(hits) >= limit:
+                hits = self._hits.get(key)
+                if hits is not None:
+                    while hits and hits[0] <= timestamp - self.WINDOW_SECONDS:
+                        hits.popleft()
+                if hits and len(hits) >= limit:
                     retry_after = max(
                         retry_after,
                         max(1, math.ceil(hits[0] + self.WINDOW_SECONDS - timestamp)),
@@ -78,7 +79,7 @@ class AuthThrottle:
                     headers={"Retry-After": str(retry_after), "Cache-Control": "no-store"},
                 )
             for key, _ in limits:
-                self._hits[key].append(timestamp)
+                self._hits.setdefault(key, deque()).append(timestamp)
 
     def _prune(self, timestamp: float) -> None:
         cutoff = timestamp - self.WINDOW_SECONDS
