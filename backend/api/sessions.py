@@ -1,6 +1,7 @@
 """Coordinator management API; it intentionally contains no salary endpoint."""
 
 import secrets
+import time
 from datetime import datetime
 from typing import Annotated
 
@@ -186,12 +187,23 @@ async def run_session(
     session_id: str,
     _: ManagementAccess,
     db: DatabaseSession,
+    response: Response,
 ) -> SessionView:
+    """Expose authenticated coordinator request duration, never private inputs.
+
+    The measurement includes coordinator status checks, the real three-party
+    computation and database finalization. It excludes founder onboarding,
+    browser/network transit and possible Render cold starts.
+    """
+    started = time.perf_counter()
+    response.headers["Cache-Control"] = "no-store"
     try:
         record = await get_session(db, session_id)
         if record.state not in ("completed", "failed", "expired"):
             record = await refresh_submission_state(db, record, _coordinator())
         record = await compute_session(db, record, _coordinator())
+        elapsed_ms = (time.perf_counter() - started) * 1000.0
+        response.headers["Server-Timing"] = f"coordinator-compute;dur={elapsed_ms:.2f}"
         return _as_view(record)
     except HTTPException:
         raise
