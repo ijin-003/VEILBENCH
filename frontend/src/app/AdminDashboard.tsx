@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import AccountInvite from "./AccountInvite";
 import ReactorStage from "./ReactorStage";
+import "./approved-board.css";
 import { ProtocolWalkthrough } from "./LearningCenter";
 
 type HealthData = {
@@ -252,8 +253,8 @@ export default function AdminDashboard({ token }: { token: string }) {
       <div className="r4-reactor-layout">
         <header className="r4-reactor-head">
           <div>
-            <span className="r4-kicker">THE REACTOR / 03</span>
-            <h1>THREE IN. <em>ONE OUT.</em></h1>
+            <span className="r4-kicker">THREE-FOUNDER SECURE COMPUTATION / 03</span>
+            <h1>MPC <em>REACTOR.</em></h1>
           </div>
           <div className="r4-reactor-actions">
             <span className={`r4-link ${isConnected ? "r4-link--online" : ""}`} role="status">
@@ -291,10 +292,19 @@ export default function AdminDashboard({ token }: { token: string }) {
         </div>
 
         {complete && resultOpen && session?.result && (
-          <section className="r4-results" aria-label="Computed aggregate results" aria-live="polite">
-            <span className="r4-results-mark">AGGREGATE / RELEASED</span>
-            <div><small>SUM</small><strong>{numberFormat.format(session.result.aggregate_sum)}</strong></div>
-            <div><small>AVERAGE</small><strong>{numberFormat.format(session.result.average_salary)}</strong></div>
+          <section className="r4-results vb-board-results" aria-label="Computed aggregate results" aria-live="polite">
+            <div className="vb-board-results-art" aria-hidden="true">
+              <div className="vb-board-results-silhouettes">
+                <span>01 / SECURED</span><span>02 / SECURED</span><span>03 / SECURED</span>
+              </div>
+            </div>
+            <div className="vb-board-results-data">
+              <h2>COMPUTATION COMPLETE.</h2>
+              <p>AGGREGATE RESULTS ONLY</p>
+              <div className="vb-board-result-row"><small>TOTAL / SUM</small><strong>{numberFormat.format(session.result.aggregate_sum)}</strong></div>
+              <div className="vb-board-result-row"><small>AVERAGE</small><strong>{numberFormat.format(session.result.average_salary)}</strong></div>
+              <span className="vb-board-results-note">THREE FOUNDERS. ONE SHARED RESULT. NO INDIVIDUAL SALARIES REVEALED.</span>
+            </div>
           </section>
         )}
 
