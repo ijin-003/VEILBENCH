@@ -1,0 +1,95 @@
+/* VEILBENCH — APPROVED REACTOR BOARD / INTERNAL SCREENS ONLY.
+   Deliberately scoped to .vb-auth, .r4-reactor-root, and .d4-root.
+   The Vanguard title page and all vanguard-* selectors are untouched. */
+:root { --board-cream:#f8f1e6; --board-red:#e60f21; --board-ink:#151313; }
+.vb-auth.vb-auth-v2, .r4-reactor-root, .d4-root { --board-display:Impact,"Arial Narrow","Franklin Gothic Heavy",Arial,sans-serif; }
+.vb-auth.vb-auth-v2 { background:var(--board-cream); color:var(--board-ink); }
+.vb-auth.vb-auth-v2 .vb-auth-art { background:var(--board-red); position:relative; isolation:isolate; overflow:hidden; }
+.vb-auth.vb-auth-v2 .vb-auth-art::before { content:"";position:absolute;inset:-18% -20%;background:#121111;clip-path:polygon(0 0,31% 0,68% 90%,0 69%);z-index:1;opacity:.98;pointer-events:none; }
+.vb-auth.vb-auth-v2 .vb-auth-art::after {content:""; position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(136deg,transparent 48%,#f9f0e2 48.4%,#f9f0e2 50%,transparent 50.4%);opacity:.78}
+.vb-auth.vb-auth-v2 .vb-auth-motion { z-index:2; }
+.vb-auth.vb-auth-v2 .vb-auth-vector-ring {border-color:rgba(255,246,232,.6)}
+.vb-auth.vb-auth-v2 .vb-auth-emblem { background:var(--board-cream);color:var(--board-ink);box-shadow:12px 14px 0 #151313, -9px -10px 0 rgba(255,255,255,.2); transform:rotate(-12deg); }
+.vb-auth.vb-auth-v2 .vb-auth-art-caption strong { font-family:var(--board-display);font-style:italic;letter-spacing:-.045em;text-shadow:4px 5px 0 #151313; }
+.vb-auth.vb-auth-v2 .vb-auth-side {background:var(--board-cream);color:var(--board-ink)}
+.vb-auth.vb-auth-v2 .vb-auth-wordmark {font-family:var(--board-display);font-style:italic;letter-spacing:-.045em}
+.vb-auth.vb-auth-v2 .vb-auth-heading-wrap h1{font-family:var(--board-display);font-weight:900;font-style:italic;letter-spacing:-.055em;line-height:.89}
+.vb-auth.vb-auth-v2 .vb-auth-heading-wrap h1 em {color:var(--board-red)}
+.vb-auth.vb-auth-v2 .vb-auth-heading-shadow {opacity:.045}
+.vb-auth.vb-auth-v2 .vb-auth-kicker,.vb-auth.vb-auth-v2 .vb-auth-field>span:first-child{letter-spacing:.16em}
+.vb-auth.vb-auth-v2 .vb-auth-field input {border:2px solid var(--board-ink);background:#fffaf1;border-radius:0;color:var(--board-ink)}
+.vb-auth.vb-auth-v2 .vb-auth-field input:focus-visible {outline:3px solid var(--board-red);outline-offset:3px}
+.vb-auth.vb-auth-v2 .vb-auth-submit {background:var(--board-red);color:#fff;border:2px solid var(--board-ink);border-radius:0;clip-path:polygon(4% 0,100% 0,96% 100%,0 100%);font-family:var(--board-display);font-style:italic;letter-spacing:.025em;box-shadow:none}
+.vb-auth.vb-auth-v2 .vb-auth-submit:hover:not(:disabled){background:var(--board-ink)}
+.vb-auth.vb-auth-v2 .vb-auth-submit:focus-visible{outline:3px solid #151313;outline-offset:4px}
+.vb-auth.vb-auth-v2 .vb-auth-disclaimer {color:#605555}
+
+/* Admin page: the machine stays central; status and tools are supporting cast. */
+.r4-reactor-root:has(.rv7-scene){background:var(--board-cream);color:var(--board-ink)}
+.r4-reactor-root:has(.rv7-scene) .r4-reactor-layout{max-width:1700px;padding:clamp(15px,2vw,30px) clamp(18px,3.3vw,58px) 24px}
+.r4-reactor-root:has(.rv7-scene) .r4-reactor-head{position:relative;z-index:4;align-items:flex-start}
+.r4-reactor-root:has(.rv7-scene) .r4-reactor-head h1 {font-family:var(--board-display);font-size:clamp(39px,5vw,84px);line-height:.85;letter-spacing:-.035em;font-style:italic}
+.r4-reactor-root:has(.rv7-scene) .r4-reactor-head h1 em{color:var(--board-red)}
+.r4-reactor-root:has(.rv7-scene) .r4-reactor-view{min-height:400px}
+.r4-reactor-root:has(.rv7-scene) .rv7-scene{background:transparent}
+.r4-reactor-root:has(.rv7-scene) .r4-reactor-command{align-items:center;gap:20px;border-top:3px solid var(--board-ink);padding-top:16px}
+.r4-reactor-root:has(.rv7-scene) .r4-reactor-status strong{font-family:var(--board-display);font-style:italic;font-size:clamp(18px,2.1vw,33px);letter-spacing:.01em}
+.r4-reactor-root:has(.rv7-scene) .r4-primary{background:var(--board-red);border:2px solid var(--board-ink);border-radius:0;clip-path:polygon(6% 0,100% 0,94% 100%,0 100%);min-height:58px;font-family:var(--board-display);font-style:italic;font-size:clamp(17px,1.8vw,26px);letter-spacing:.03em;padding-inline:clamp(26px,4vw,60px)}
+.r4-reactor-root:has(.rv7-scene) .r4-primary:not(:disabled):hover{background:var(--board-ink);color:#fff}
+.r4-reactor-root:has(.rv7-scene) .r4-primary:focus-visible{outline:3px solid var(--board-red);outline-offset:5px}
+.r4-reactor-root:has(.rv7-scene) .r4-tools{border:2px solid var(--board-ink);border-radius:0;font-weight:850}
+.r4-reactor-root:has(.rv7-scene) .r4-privacy{letter-spacing:.035em}
+/* Result reveal: distinct editorial panel without exposing individual inputs. */
+.r4-reactor-root .r4-results.vb-board-results {position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(220px,.9fr) minmax(320px,1.1fr);gap:clamp(20px,3.5vw,64px);padding:clamp(24px,4vw,65px);background:var(--board-cream);color:var(--board-ink);border:3px solid var(--board-ink);border-radius:0;box-shadow:10px 10px 0 var(--board-ink);animation:vb-board-reveal .6s cubic-bezier(.2,.7,.15,1) both}
+.r4-reactor-root .vb-board-results::before{content:"";position:absolute;inset:auto auto -18% -14%;width:66%;height:130%;background:var(--board-red);clip-path:polygon(0 34%,100% 0,69% 45%,100% 53%,53% 78%,0 100%);pointer-events:none}
+.r4-reactor-root .vb-board-results-art {position:relative;min-height:270px;display:flex;justify-content:center;align-items:center;z-index:1}
+.r4-reactor-root .vb-board-results-art::before,.r4-reactor-root .vb-board-results-art::after {content:"";position:absolute;left:12%;right:0;height:12px;background:#111;clip-path:polygon(0 0,83% 0,100% 50%,83% 100%,0 100%);transform:rotate(-17deg)}
+.r4-reactor-root .vb-board-results-art::before{top:30%}.r4-reactor-root .vb-board-results-art::after{top:67%;transform:rotate(15deg)}
+.r4-reactor-root .vb-board-results-silhouettes{position:relative;display:flex;flex-direction:column;gap:15px;z-index:2;font:italic 900 clamp(20px,2.7vw,40px)/1 var(--board-display);color:#fff;text-shadow:3px 3px 0 #111;letter-spacing:.01em}
+.r4-reactor-root .vb-board-results-silhouettes span{background:#111;padding:9px 19px;transform:skewX(-12deg)}
+.r4-reactor-root .vb-board-results-silhouettes span:nth-child(2){margin-left:16px}.r4-reactor-root .vb-board-results-silhouettes span:nth-child(3){margin-left:32px}
+.r4-reactor-root .vb-board-results-data{position:relative;z-index:2;display:flex;flex-direction:column;justify-content:center;gap:20px}
+.r4-reactor-root .vb-board-results-data h2{font:italic 900 clamp(31px,4.1vw,64px)/.92 var(--board-display);letter-spacing:-.035em;max-width:600px}
+.r4-reactor-root .vb-board-results-data p{font-size:11px;font-weight:900;letter-spacing:.26em}
+.r4-reactor-root .vb-board-result-row {background:var(--board-red);color:#fff;transform:skewX(-9deg);padding:13px 22px 16px;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.r4-reactor-root .vb-board-result-row small{font:italic 900 15px/1 var(--board-display);background:#111;padding:6px 12px;align-self:flex-start}
+.r4-reactor-root .vb-board-result-row strong{font:italic 900 clamp(36px,4.8vw,78px)/1 var(--board-display);letter-spacing:-.015em;font-variant-numeric:tabular-nums}
+.r4-reactor-root .vb-board-result-row>*{transform:skewX(9deg)}
+.r4-reactor-root .vb-board-results-note{font-size:11px;color:#554a47;letter-spacing:.06em}
+@keyframes vb-board-reveal{from{opacity:0;transform:translateY(24px) skewX(-2deg)}to{opacity:1;transform:translateY(0) skewX(0)}}
+
+/* Founder page: a secured illustrated vessel, quiet form, one primary action. */
+.d4-root {background:var(--board-cream);color:var(--board-ink)}
+.d4-root .d4-art{position:relative;background:var(--board-red);isolation:isolate;overflow:hidden}
+.d4-root .d4-art::before{content:"";position:absolute;inset:0;background:#111;clip-path:polygon(0 0,35% 0,8% 100%,0 100%);opacity:.95;pointer-events:none}
+.d4-root .d4-art::after{content:"";position:absolute;inset:0;background:#fff7e9;clip-path:polygon(100% 0,100% 31%,45% 100%,0 100%,100% 100%);opacity:.1;pointer-events:none}
+.d4-root .d4-art-head,.d4-root .d4-art-foot{position:relative;z-index:3;color:#fffaf2;font-weight:950}
+.d4-root .d4-mark {position:relative;z-index:2;filter:drop-shadow(8px 12px 0 rgba(0,0,0,.25))}
+.d4-root .d4-work{background:var(--board-cream);color:var(--board-ink)}
+.d4-root .d4-work-content h1{font:italic 900 clamp(42px,5vw,82px)/.91 var(--board-display);letter-spacing:-.04em}
+.d4-root .d4-work-content h1 em{color:var(--board-red)}
+.d4-root .d4-form input{background:#fffaf1;color:var(--board-ink);border:2px solid var(--board-ink);border-radius:0;box-shadow:none}
+.d4-root .d4-form input:focus-visible{outline:3px solid var(--board-red);outline-offset:3px}
+.d4-root .d4-submit{background:var(--board-red);color:#fff;border:2px solid var(--board-ink);border-radius:0;clip-path:polygon(5% 0,100% 0,95% 100%,0 100%);font:italic 900 clamp(18px,2.2vw,29px)/1.15 var(--board-display);letter-spacing:.03em;min-height:62px}
+.d4-root .d4-submit:not(:disabled):hover{background:var(--board-ink)}
+.d4-root .d4-submit:focus-visible{outline:3px solid var(--board-ink);outline-offset:5px}
+.d4-root .d4-success {background:#fcf3e4;border:3px solid var(--board-ink);border-radius:0;color:var(--board-ink)}
+.d4-root .d4-success strong{font:italic 900 clamp(28px,3vw,45px)/1 var(--board-display);color:var(--board-red)}
+@media(max-width:800px){
+ .r4-reactor-root .r4-results.vb-board-results{grid-template-columns:1fr;padding:22px;gap:12px}
+ .r4-reactor-root .vb-board-results-art{min-height:150px}
+ .r4-reactor-root .vb-board-results-silhouettes{flex-direction:row}
+ .r4-reactor-root .vb-board-results-silhouettes span{margin-left:0!important;font-size:20px}
+ .r4-reactor-root:has(.rv7-scene) .r4-reactor-command{flex-wrap:wrap}
+ .r4-reactor-root:has(.rv7-scene) .r4-primary{min-height:54px}
+}
+@media(max-width:560px){
+ .r4-reactor-root .vb-board-results-silhouettes span{font-size:14px;padding:6px}
+ .r4-reactor-root .vb-board-result-row strong{font-size:clamp(32px,10vw,52px)}
+ .r4-reactor-root .vb-board-results-data h2{font-size:clamp(29px,9vw,42px)}
+ .vb-auth.vb-auth-v2 .vb-auth-art::before{opacity:.65}
+}
+@media(prefers-reduced-motion:reduce){
+ .r4-reactor-root .r4-results.vb-board-results{animation:none}
+ .vb-auth.vb-auth-v2 .vb-auth-emblem,.d4-root .d4-mark{transition:none!important}
+}
