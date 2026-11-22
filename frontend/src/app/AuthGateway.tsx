@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import type { FormEvent } from "react";
+import { useRef, useState } from "react";
+import type { FormEvent, PointerEvent } from "react";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { GuidedTour } from "./LearningCenter";
 import "./approved-board.css";
@@ -39,14 +39,14 @@ export function AccessPadlockArtwork() {
       <path d="M445 650L720 530V650Z" fill="#151313"/>
       <path d="M-20 250L198 380 155 430-20 320Z" fill="#ffefe2" opacity=".95"/>
       {/* Decorative chains: individual outlined links crossing the left and upper corners. */}
-      <g transform="translate(-100 125) rotate(-28 200 0)" stroke="#fff5ea" strokeWidth="13" fill="#151313">
+      <g className="vb-board-chain vb-board-chain--top" transform="translate(-100 125) rotate(-28 200 0)" stroke="#fff5ea" strokeWidth="13" fill="#151313">
         {Array.from({length:8},(_,i)=><rect key={i} x={i*83} y={0} width="104" height="52" rx="25" transform={`rotate(${i%2===0?10:-10} ${i*83+52} 26)`} />)}
       </g>
-      <g transform="translate(-128 516) rotate(-31 200 0)" stroke="#151313" strokeWidth="14" fill="#f8eee0">
+      <g className="vb-board-chain vb-board-chain--bottom" transform="translate(-128 516) rotate(-31 200 0)" stroke="#151313" strokeWidth="14" fill="#f8eee0">
         {Array.from({length:8},(_,i)=><rect key={i} x={i*86} y="0" width="104" height="48" rx="24" />)}
       </g>
       {/* Padlock shadow, shackle and body: near the proportions of the approved reference. */}
-      <g transform="translate(118 100) rotate(-10 205 260)">
+      <g className="vb-board-lock-body" transform="translate(118 100) rotate(-10 205 260)">
         <path d="M128 250V174C128 65 193 16 278 16S428 65 428 174V258H346V174C346 122 319 95 278 95S210 122 210 174V250Z" fill="#141313" stroke="#fff5e8" strokeWidth="12" />
         <path d="M166 248V174C166 89 213 55 278 55S390 89 390 174V248" stroke="#e30d20" strokeWidth="16" fill="none"/>
         <path d="M73 264L400 209 433 459 120 509Z" fill="#151313" stroke="#fff5e8" strokeWidth="13"/>
@@ -56,7 +56,7 @@ export function AccessPadlockArtwork() {
         <path d="M105 480L436 425" stroke="#151313" strokeWidth="12"/>
       </g>
       <path d="M-40 612L680 434" stroke="#151313" strokeWidth="16"/>
-      <circle cx="317" cy="276" r="172" fill="none" stroke="#fdf3e6" strokeWidth="1.5" opacity=".55"/>
+      <circle className="vb-board-target-ring" cx="317" cy="276" r="172" fill="none" stroke="#fdf3e6" strokeWidth="1.5" opacity=".55"/>
       <path d="M318 90V125M318 434V466M133 276H164M477 276H506" stroke="#fff8ee" strokeWidth="2" opacity=".8"/>
       <rect width="720" height="650" fill="url(#vb-board-grain)" pointerEvents="none"/>
     </svg>
@@ -68,11 +68,42 @@ export default function AuthGateway({
   onUsernameChange, onPasswordChange, onInvitationChange,
   onSubmit, onToggleActivate, onBack,
 }: AuthGatewayProps) {
+
   const [showPassword, setShowPassword] = useState(false);
+  const artRef = useRef<HTMLElement>(null);
+
+  // CSS-variable parallax avoids React renders on each pointer event.
+  // Motion is disabled for touch and prefers-reduced-motion.
+  function animateArtwork(event: PointerEvent<HTMLElement>) {
+    if (event.pointerType !== "mouse" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const node = artRef.current;
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
+    const horizontal = Math.max(-.5, Math.min(.5, (event.clientX - rect.left) / rect.width - .5));
+    const vertical = Math.max(-.5, Math.min(.5, (event.clientY - rect.top) / rect.height - .5));
+    node.style.setProperty("--vb-art-x", (horizontal * 19).toFixed(1) + "px");
+    node.style.setProperty("--vb-art-y", (vertical * 17).toFixed(1) + "px");
+    node.style.setProperty("--vb-lock-x", (horizontal * -21).toFixed(1) + "px");
+    node.style.setProperty("--vb-lock-y", (vertical * -14).toFixed(1) + "px");
+    node.style.setProperty("--vb-chain-x", (horizontal * 12).toFixed(1) + "px");
+    node.style.setProperty("--vb-cursor-x", ((horizontal + .5) * 100).toFixed(1) + "%");
+    node.style.setProperty("--vb-cursor-y", ((vertical + .5) * 100).toFixed(1) + "%");
+  }
+
+  function resetArtwork() {
+    const node = artRef.current;
+    if (!node) return;
+    for (const property of ["--vb-art-x", "--vb-art-y", "--vb-lock-x", "--vb-lock-y", "--vb-chain-x"]) {
+      node.style.setProperty(property, "0px");
+    }
+  }
   return (
     <main className="vb-board-access" data-mode={activate ? "activate" : "login"}>
-      <section className="vb-board-access-art" aria-label="Secure access illustration">
+      <section ref={artRef} onPointerMove={animateArtwork} onPointerLeave={resetArtwork} className="vb-board-access-art" aria-label="Animated chained padlock illustration">
         <AccessPadlockArtwork />
+        <div className="vb-board-cursor-glow" aria-hidden="true" />
+        <div className="vb-board-speed-slash" aria-hidden="true" />
+        <div className="vb-board-motion-reticle" aria-hidden="true"><i /><i /></div>
         <div className="vb-board-art-logo" aria-hidden="true">VEILBENCH <b>/</b></div>
         <span className="vb-board-art-edge" aria-hidden="true">ACCESS / CONTROLLED</span>
       </section>
@@ -82,9 +113,9 @@ export default function AuthGateway({
           <span className="vb-board-access-brand">VEILBENCH <b>//</b></span>
         </header>
         <div className="vb-board-access-main">
-          <span className="vb-board-access-index"><i /> {activate ? "02 / ACTIVATE ACCOUNT" : "01 / AUTHENTICATED ACCESS"}</span>
-          <h1 className="vb-board-access-title">{activate ? <>ACTIVATE<br/>ACCOUNT</> : <>ACCESS<br/>GATEWAY</>}</h1>
-          <p className="vb-board-access-intro">{activate ? "PRIVATE INVITATION REQUIRED" : "AUTHENTICATED ACCESS ONLY"}</p>
+          <span className="vb-board-access-index"><i /> {activate ? "02 / INVITATION ACCESS" : "01 / AUTHENTICATED ACCESS"}</span>
+          <h1 className="vb-board-access-title"><>ACCESS<br/>GATEWAY</></h1>
+          <p className="vb-board-access-intro">{activate ? "INVITATION-ONLY ACCOUNT ACTIVATION" : "AUTHENTICATED ACCESS ONLY"}</p>
           <form className="vb-board-access-form" onSubmit={onSubmit}>
             <label>
               <span>USERNAME</span>
@@ -102,7 +133,7 @@ export default function AuthGateway({
               </span>
             </label>
             {message && <p className="vb-board-access-message" role="status" aria-live="polite">{message}</p>}
-            <button className="vb-board-access-submit" type="submit" disabled={busy}>
+            <button className="vb-board-access-submit vb-board-magnetic" type="submit" disabled={busy}>
               <span>{busy?"PROCESSING…":activate?"ACTIVATE ACCOUNT":"SIGN IN"}</span><ArrowRight size={26}/>
             </button>
           </form>
