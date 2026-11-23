@@ -1,5 +1,6 @@
 """Login credentials and assignments; never stores participant inputs."""
-from sqlalchemy import String, Integer, BigInteger, ForeignKey, UniqueConstraint
+from datetime import datetime, timezone
+from sqlalchemy import String, Integer, BigInteger, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from backend.models.session import Base
 
@@ -9,6 +10,8 @@ class Account(Base):
     __table_args__ = (UniqueConstraint("benchmark_id", "party_id"),)
     username: Mapped[str] = mapped_column(String(80), primary_key=True)
     role: Mapped[str] = mapped_column(String(16), nullable=False)
+    # Legacy rows predate this field; do not invent their historical signup dates.
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(256))
     invitation_hash: Mapped[str | None] = mapped_column(String(64))
     invitation_expiry: Mapped[int] = mapped_column(BigInteger, default=0)
