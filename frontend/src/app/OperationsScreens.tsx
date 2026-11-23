@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import Image from "next/image";
-import { ArrowRight, LockKeyhole, Plus, RefreshCw, ShieldCheck } from "lucide-react";
+import { ArrowRight, LockKeyhole, Plus, RefreshCw } from "lucide-react";
 import "./internal-red-black.css";
 
 const FOUNDERS = [0, 1, 2] as const;
