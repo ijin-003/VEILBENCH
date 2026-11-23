@@ -2,10 +2,12 @@
 
 import secrets
 import time
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Literal
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
+from sqlalchemy import select, func
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -62,6 +64,11 @@ class SessionView(BaseModel):
 
 class CreatedSession(SessionView):
     founder_invites: list[FounderInvite]
+
+
+class SessionDirectory(BaseModel):
+    sessions: list[SessionView]
+    total: int
 
 
 def _as_view(record: BenchmarkSession) -> SessionView:
@@ -163,6 +170,41 @@ async def start_session(
         for party_id in range(3)
     ]
     return CreatedSession(**_as_view(record).model_dump(), founder_invites=invites)
+
+
+@router.get("", response_model=SessionDirectory)
+async def list_sessions(
+    response: Response,
+    _: ManagementAccess,
+    db: DatabaseSession,
+    scope: Literal["active", "all"] = "active",
+    offset: int = 0,
+    limit: int = 50,
+) -> SessionDirectory:
+    """Return bounded session metadata for the administrator's session browser.
+
+    This endpoint intentionally neither contacts party services nor returns
+    salary inputs, tokens, or private shares. Poll individual selected session
+    status separately to obtain current submission metadata.
+    """
+    if offset < 0 or not 1 <= limit <= 100:
+        raise HTTPException(422, "Use offset >= 0 and limit between 1 and 100")
+    query = select(BenchmarkSession)
+    count_query = select(func.count()).select_from(BenchmarkSession)
+    if scope == "active":
+        active = (
+            BenchmarkSession.expires_at > datetime.now(timezone.utc),
+            BenchmarkSession.state.in_(("created", "ready", "computing")),
+        )
+        query = query.where(*active)
+        count_query = count_query.where(*active)
+    total = await db.scalar(count_query)
+    records = (await db.scalars(
+        query.order_by(BenchmarkSession.created_at.desc(), BenchmarkSession.id.desc())
+        .offset(offset).limit(limit)
+    )).all()
+    response.headers["Cache-Control"] = "no-store"
+    return SessionDirectory(total=total or 0, sessions=[_as_view(record) for record in records])
 
 
 @router.get("/{session_id}", response_model=SessionView)
