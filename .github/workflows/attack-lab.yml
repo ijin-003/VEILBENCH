@@ -1,0 +1,38 @@
+name: VEILBENCH isolated attack lab
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "scripts/attack_lab.py"
+      - ".github/workflows/attack-lab.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  attack-lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install test dependencies
+        run: python -m pip install -r backend/requirements.txt
+      - name: Execute isolated security attack cases
+        run: python -m scripts.attack_lab
+      - name: Upload exact observed security evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbench-attack-lab-evidence
+          path: |
+            artifacts/attack-lab/index.html
+            artifacts/attack-lab/report.json
+            artifacts/attack-lab/pytest-results.xml
+          if-no-files-found: error
