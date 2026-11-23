@@ -11,10 +11,12 @@ from backend.models import Base, BenchmarkSession
 from backend.models.account import Account, LoginSession
 from backend.security.accounts import digest
 from backend.services.database import get_database_session
+from backend.config import settings
 
 
 @pytest.mark.asyncio
-async def test_directories_are_admin_only_paginated_and_secret_free(tmp_path):
+async def test_directories_are_admin_only_paginated_and_secret_free(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "COORDINATOR_ADMIN_TOKEN", "synthetic-control-only")
     engine = create_async_engine("sqlite+aiosqlite:///" + str(tmp_path / "directory.sqlite"))
     factory = async_sessionmaker(engine, expire_on_commit=False)
     async with engine.begin() as connection:
