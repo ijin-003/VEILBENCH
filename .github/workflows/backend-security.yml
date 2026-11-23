@@ -64,7 +64,6 @@ jobs:
           VEILBENCH_E2E_LOCAL: "1"
           VEILBENCH_E2E_DATABASE_URL: "postgresql+asyncpg://synthetic:synthetic-only-ci-password@127.0.0.1:5432/veilbench_e2e"
           NO_PROXY: "127.0.0.1,localhost"
-          no_proxy: "127.0.0.1,localhost"
           PYTHONUNBUFFERED: "1"
         run: python -m pytest backend/tests/test_phase_d_e2e.py -v -s -o addopts="--asyncio-mode=auto" --junitxml=phase-d-results.xml
       - name: Upload full-stack evidence
