@@ -48,7 +48,7 @@ export function OperationsReactor({submitted,state,connected,connecting,headline
       <Image className="reactor-machine" src="/images/reactor-monolith-v7.png" alt="" width={1086} height={1448} priority sizes="(max-width:760px) 70vw,55vw" />
       <div className="pod-connections" aria-hidden="true"><svg viewBox="0 0 1000 500" preserveAspectRatio="none"><path d="M500,62 C500,160 145,88 145,317 M500,90 L500,310 M500,60 C500,160 851,88 851,318"/><path className="highlight" d="M500,62 C500,160 145,88 145,317 M500,90 L500,310 M500,60 C500,160 851,88 851,318"/></svg></div>
       <div className="pod-row" role="list" aria-label="Founder submission status">
-        {FOUNDERS.map((id)=><div key={id} role="listitem" className={`pod ${submitted.has(id)?"received":""} ${computing?"computing":""}`} data-party={id} aria-label={`Founder ${id+1}: ${submitted.has(id)?"submitted":"waiting"}`}>
+        {FOUNDERS.map((id)=><div key={id} role="listitem" className={`pod ${submitted.has(id)?"received secured":""} ${computing?"computing processing":""}`} data-party={id} aria-label={`Founder ${id+1}: ${submitted.has(id)?"submitted":"waiting"}`}>
           <strong>FOUNDER 0{id+1}</strong><small><i className="dot"/><span>{submitted.has(id)?"SUBMITTED":"WAITING"}</span></small><i className="pod-leg" aria-hidden="true"/>
         </div>)}
       </div>
