@@ -7,6 +7,7 @@ or databases are accessed. Opt-in via VEILBENCH_E2E_LOCAL=1.
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 from pathlib import Path
 import sys
@@ -54,9 +55,9 @@ async def test_admin_founders_real_mpyc_database_round_trip(tmp_path, monkeypatc
     monkeypatch.setenv("MPC_THRESHOLD", "1")
     monkeypatch.setenv("SESSION_TTL_SECONDS", "1800")
     monkeypatch.setenv("COORDINATOR_ADMIN_TOKEN", "synthetic-local-admin-control-credential")
-    monkeypatch.setenv("MPC_PARTY_PUBLIC_URLS", ",".join(
+    monkeypatch.setenv("MPC_PARTY_PUBLIC_URLS", json.dumps([
         f"http://127.0.0.1:{port}" for port in PARTY_HTTP_PORTS
-    ))
+    ]))
     secrets_by_party = [
         f"synthetic-party-{index}-founder-signing-secret-only" for index in range(3)
     ]
