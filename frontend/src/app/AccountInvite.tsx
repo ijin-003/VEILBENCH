@@ -16,7 +16,7 @@ export default function AccountInvite({ token, sessionId, partyId }: { token: st
     finally { setBusy(false); }
   }
   return <div className="mt-3 space-y-2"><label className="block">Participant username<input className="input w-full" value={username} disabled={Boolean(invitation)} onChange={e => setUsername(e.target.value.toLowerCase())} /></label>
-    {invitation ? <><label className="block">Private invitation code<input className="input w-full" readOnly type="password" value={invitation} /></label><button className="button-secondary" onClick={() => { void navigator.clipboard.writeText(`Website: ${window.location.origin}\nUsername: ${username}\nInvitation: ${invitation}`).then(() => setMessage("Copied. Share privately."), () => setMessage("Clipboard unavailable.")); }}>Copy account invitation</button></> : <button className="button-primary" disabled={busy || !username} onClick={() => void invite()}>Invite participant</button>}
+    {invitation ? <><label className="block">Private invitation code<input className="input w-full" readOnly type="password" value={invitation} /></label><button className="button-secondary" onClick={() => { void navigator.clipboard.writeText(invitation).then(() => setMessage("Token copied. Share privately; it cannot be retrieved later."), () => setMessage("Clipboard unavailable.")); }}>Copy token only</button></> : <button className="button-primary" disabled={busy || !username} onClick={() => void invite()}>Invite participant</button>}
     {message && <p role="status">{message}</p>}
   </div>;
 }
