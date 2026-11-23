@@ -1563,3 +1563,16 @@ body {
  .v6-motion-scene .v5-machine{transform:translate(-50%,-50%)!important}
  .v6-cutout,.v6-speedline,.v6-burst,.v6-cursor-light{display:none!important}
 }
+
+
+/* Invitation activation: compact live password quality + confirmation, no remote password checks. */
+.vb-auth-v2 .vb-auth-password-check{display:grid;gap:6px;color:#cfc0bb}
+.vb-auth-v2 .vb-auth-strength-head{display:flex;justify-content:space-between;font-size:9px;letter-spacing:.12em;font-weight:900}
+.vb-auth-v2 .vb-auth-strength-head strong{color:#fff2e6}
+.vb-auth-v2 .vb-auth-strength-bars{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;height:5px}
+.vb-auth-v2 .vb-auth-strength-bars i{background:#4b343b;transition:background .15s ease}
+.vb-auth-v2 .vb-auth-strength-bars i.active{background:#ed4357}
+.vb-auth-v2 .vb-auth-password-check p{font-size:10px;line-height:1.4;color:#bdaba9;margin:0}
+.vb-auth-v2 .vb-auth-match{font-size:10px;letter-spacing:.08em;font-weight:800;color:#ff6d7e}
+.vb-auth-v2 .vb-auth-match.is-match{color:#8ce2a7}
+.vb-auth-v2 .vb-auth-submit:disabled{cursor:not-allowed}
