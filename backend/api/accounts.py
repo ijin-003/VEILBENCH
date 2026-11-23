@@ -1,12 +1,12 @@
 """Account workflow, kept separate from private party input endpoints."""
 import secrets
 import time
-from datetime import timezone
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, Header, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 from sqlalchemy.exc import IntegrityError
 from starlette.concurrency import run_in_threadpool
 
@@ -31,6 +31,21 @@ class Credentials(BaseModel):
 
 class Activation(Credentials):
     invitation: str = Field(min_length=20, max_length=128)
+
+
+class AccountSummary(BaseModel):
+    username: str
+    role: str
+    created_at: datetime | None
+    activation_status: str
+    benchmark_id: str | None
+    party_id: int | None
+    invitation_expiry: int | None
+
+
+class AccountDirectory(BaseModel):
+    accounts: list[AccountSummary]
+    total: int
 
 
 class Invite(BaseModel):
@@ -124,3 +139,45 @@ async def assignment(response: Response, db: Db, account: Member):
         "capability": issue_founder_token(settings.founder_secrets[party_id], benchmark.id, party_id, expiry(benchmark)),
         "state": benchmark.state,
     }
+
+
+@router.get("", response_model=AccountDirectory)
+async def list_accounts(
+    response: Response,
+    db: Db,
+    admin: Admin,
+    offset: int = 0,
+    limit: int = 100,
+):
+    """Administrator-only, paginated account directory with metadata only.
+
+    No password hashes, invitation hashes, bearer tokens, salary values, or
+    capability tokens may be returned here.
+    """
+    if offset < 0 or not 1 <= limit <= 100:
+        raise HTTPException(422, "Use offset >= 0 and limit between 1 and 100")
+    now = int(time.time())
+    total = await db.scalar(select(func.count()).select_from(Account))
+    records = (await db.scalars(
+        select(Account).order_by(Account.username).offset(offset).limit(limit)
+    )).all()
+    response.headers["Cache-Control"] = "no-store"
+    return AccountDirectory(
+        total=total or 0,
+        accounts=[
+            AccountSummary(
+                username=account.username,
+                role=account.role,
+                created_at=account.created_at,
+                activation_status=(
+                    "active" if account.password_hash else
+                    "expired" if account.invitation_expiry <= now else
+                    "invited"
+                ),
+                benchmark_id=account.benchmark_id,
+                party_id=account.party_id,
+                invitation_expiry=account.invitation_expiry if not account.password_hash else None,
+            )
+            for account in records
+        ],
+    )
