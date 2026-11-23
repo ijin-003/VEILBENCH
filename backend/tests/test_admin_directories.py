@@ -88,3 +88,20 @@ async def test_directories_are_admin_only_paginated_and_secret_free(tmp_path, mo
     finally:
         app.dependency_overrides.clear()
         await engine.dispose()
+
+
+@pytest.mark.parametrize("password,username", [
+    ("passwordpassword", "candidate"),
+    ("123456789012", "candidate"),
+    ("founder1-long-phrase", "founder1"),
+    ("aaaaaaaaaaaa", "candidate"),
+])
+def test_weak_password_policy_rejects_obvious_risks(password, username):
+    from backend.api.accounts import weak_new_password
+    assert weak_new_password(password, username)
+
+
+def test_password_policy_keeps_long_unique_passphrases_valid():
+    from backend.api.accounts import weak_new_password
+    assert not weak_new_password("several vivid clouds over dusk", "candidate")
+    assert not weak_new_password("participant-password", "participant-0")
