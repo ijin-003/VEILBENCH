@@ -67,8 +67,30 @@ async def test_admin_founders_real_mpyc_database_round_trip(tmp_path, monkeypatc
         monkeypatch.setenv(f"MPC_NODE{index}_TOKEN", controls[index])
         monkeypatch.setenv(f"MPC_FOUNDER_TOKEN_SECRET_{index}", secrets_by_party[index])
 
-    # Import only after configuring settings: pydantic Settings is initialized
-    # once when the backend is imported.
+    # pytest loads some backend modules at collection time. Set the existing
+    # Pydantic Settings instance as well as child-process environment variables.
+    from backend.config import settings
+    for setting_name, setting_value in {
+        "DATABASE_URL": db_url,
+        "ENVIRONMENT": "development",
+        "DATABASE_AUTO_CREATE": True,
+        "MPC_REQUIRE_TLS": False,
+        "FRONTEND_PUBLIC_URL": "http://127.0.0.1:3000",
+        "MPC_PARTIES_COUNT": 3,
+        "MPC_THRESHOLD": 1,
+        "SESSION_TTL_SECONDS": 1800,
+        "COORDINATOR_ADMIN_TOKEN": "synthetic-local-admin-control-credential",
+        "MPC_PARTY_PUBLIC_URLS": [
+            f"http://127.0.0.1:{port}" for port in PARTY_HTTP_PORTS
+        ],
+        **{f"MPC_NODE{i}_URL": f"http://127.0.0.1:{port}"
+           for i, port in enumerate(PARTY_HTTP_PORTS)},
+        **{f"MPC_NODE{i}_TOKEN": controls[i] for i in range(3)},
+        **{f"MPC_FOUNDER_TOKEN_SECRET_{i}": secrets_by_party[i]
+           for i in range(3)},
+    }.items():
+        monkeypatch.setattr(settings, setting_name, setting_value)
+
     from backend.main import app
     from backend.models.account import Account
     from backend.security.accounts import hash_password
