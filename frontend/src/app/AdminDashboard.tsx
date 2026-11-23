@@ -2,12 +2,10 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
-  ArrowRight, Check, ChevronRight, CircleAlert, ClipboardCopy,
-  LoaderCircle, LockKeyhole, Menu, Play, Plus, RefreshCw,
-  ShieldCheck, X,
+  ArrowRight, ClipboardCopy, LockKeyhole, Plus, RefreshCw, X,
 } from "lucide-react";
 import AccountInvite from "./AccountInvite";
-import ReactorStage from "./ReactorStage";
+import { OperationsReactor, OperationsResults } from "./OperationsScreens";
 import { ProtocolWalkthrough } from "./LearningCenter";
 
 type HealthData = {
@@ -248,64 +246,24 @@ export default function AdminDashboard({ token }: { token: string }) {
     `${submittedCount} OF 3 INPUTS SECURED`;
 
   return (
-    <main className={`r4-reactor-root r4-reactor-${state}`}>
-      <div className="r4-reactor-layout">
-        <header className="r4-reactor-head">
-          <div>
-            <span className="r4-kicker">THE REACTOR / 03</span>
-            <h1>THREE IN. <em>ONE OUT.</em></h1>
-          </div>
-          <div className="r4-reactor-actions">
-            <span className={`r4-link ${isConnected ? "r4-link--online" : ""}`} role="status">
-              <i />{healthLoading ? "CONNECTING" : isConnected ? "LINK ACTIVE" : "LINK UNVERIFIED"}
-            </span>
-            <button ref={drawerButtonRef} className="r4-tools" type="button" onClick={() => setDrawerOpen(true)} aria-controls="ch-drawer" aria-expanded={drawerOpen}>
-              <Menu size={18} aria-hidden="true" /> SESSION TOOLS
-            </button>
-          </div>
-        </header>
-
-        <section className="r4-reactor-view" aria-label="Three-founder computation chamber">
-          <ReactorStage submitted={submitted} stage={isComputing ? "computing" : state} />
-        </section>
-
-        <div className="r4-reactor-command">
-          <div className="r4-reactor-status" role="status" aria-live="polite">
-            <span className="r4-status-eyebrow">LIVE PROTOCOL STATUS</span>
-            <strong>{headline}</strong>
-          </div>
-          <div className="r4-command-buttons">
-            {session && <button type="button" className="r4-refresh" onClick={() => void refreshSession()} disabled={busy} aria-label="Refresh submission status" title="Refresh"><RefreshCw size={19} aria-hidden="true"/></button>}
-            {!session ? (
-              <button type="button" className="r4-primary" disabled={busy} onClick={() => void createSession()}>{busy ? <LoaderCircle size={18} className="ch-spin"/> : <Plus size={18}/>} CREATE SESSION <ArrowRight size={18}/></button>
-            ) : canCompute ? (
-              <button type="button" className="r4-primary" onClick={() => void compute()}><Play size={17}/> ENGAGE COMPUTATION <ArrowRight size={18}/></button>
-            ) : complete ? (
-              <button type="button" className="r4-primary r4-primary--light" onClick={() => setResultOpen(value => !value)}><Check size={17}/>{resultOpen ? "HIDE RESULT" : "REVEAL RESULT"}<ChevronRight size={18}/></button>
-            ) : fault ? (
-              <button type="button" className="r4-primary" onClick={() => setDrawerOpen(true)}><CircleAlert size={17}/> SESSION OPTIONS <ArrowRight size={18}/></button>
-            ) : (
-              <button type="button" className="r4-primary" disabled><LockKeyhole size={17}/>{isComputing ? "COMPUTING…" : "AWAITING THREE INPUTS"}</button>
-            )}
-          </div>
-        </div>
-
-        {complete && resultOpen && session?.result && (
-          <section className="r4-results" aria-label="Computed aggregate results" aria-live="polite">
-            <span className="r4-results-mark">AGGREGATE / RELEASED</span>
-            <div><small>SUM</small><strong>{numberFormat.format(session.result.aggregate_sum)}</strong></div>
-            <div><small>AVERAGE</small><strong>{numberFormat.format(session.result.average_salary)}</strong></div>
-          </section>
-        )}
-
-        {(error || pollWarning || session?.failure_reason) && <div className="r4-alerts">
-          {error && <p role="alert">{error}</p>}
-          {session?.failure_reason && <p role="alert">{session.failure_reason}</p>}
-          {pollWarning && <p role="status">Sync warning: {pollWarning}</p>}
-        </div>}
-        <p className="r4-privacy"><ShieldCheck size={14} aria-hidden="true"/> Submission status only. Individual salaries never appear in this interface.</p>
-      </div>
-
+    <main className={`vb-ops r4-reactor-root r4-reactor-${state}`}>
+      {complete && resultOpen && session?.result ? (
+        <OperationsResults sum={session.result.aggregate_sum} average={session.result.average_salary} onBack={() => setResultOpen(false)}/>
+      ) : (
+        <OperationsReactor
+          submitted={submitted} state={state} connected={isConnected} connecting={healthLoading}
+          headline={headline} busy={busy} computing={isComputing} hasSession={Boolean(session)}
+          canCompute={canCompute} complete={complete}
+          onTools={() => setDrawerOpen(true)} onCreate={() => void createSession()}
+          onRefresh={() => void refreshSession()} onCompute={() => void compute()}
+          onReveal={() => setResultOpen(true)}
+        />
+      )}
+      {(error || pollWarning || session?.failure_reason) && <div className="ops-live-warning">
+        {error && <p role="alert">{error}</p>}
+        {session?.failure_reason && <p role="alert">{session.failure_reason}</p>}
+        {pollWarning && <p role="status">Sync warning: {pollWarning}</p>}
+      </div>}
       {drawerOpen && <div className="ch-drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setDrawerOpen(false); }}>
         <section className="ch-drawer" id="ch-drawer" ref={drawerRef} role="dialog" aria-modal="true" aria-label="Session management tools" tabIndex={-1}>
           <header className="ch-drawer-head"><div><small>VEILBENCH / ADMIN</small><h2>SESSION <em>TOOLS.</em></h2></div><button type="button" onClick={() => setDrawerOpen(false)} aria-label="Close session tools"><X size={22}/></button></header>
