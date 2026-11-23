@@ -360,7 +360,7 @@
 .vb-ops .reactor-stage .reactor-machine,.vb-ops .reactor-stage .pod-connections{pointer-events:none}
 .vb-ops .reactor-stage .pod-row{pointer-events:auto}
 .vb-ops .reactor-title-overlay{display:none}
-.vb-ops .ops-link-state{position:absolute;z-index:13;top:21px;right:clamp(28px,4vw,74px);font:800 10px var(--body);letter-spacing:.12em;color:#1c1115}
+.vb-ops .ops-link-state{position:absolute;z-index:13;top:83px;right:clamp(28px,4vw,74px);font:800 10px var(--body);letter-spacing:.12em;color:#1c1115}
 .vb-ops .ops-live-warning{position:absolute;z-index:35;top:50px;left:clamp(18px,4vw,70px);right:clamp(18px,4vw,70px);pointer-events:none}
 .vb-ops .ops-live-warning p{display:inline-block;background:#ffe9e5;color:#791428;border-left:5px solid #ed0d31;padding:10px 16px;font-size:12px;line-height:1.45;max-width:100%;pointer-events:auto}
 .vb-ops .reactor-controls .primary:disabled{opacity:.55;cursor:not-allowed}
