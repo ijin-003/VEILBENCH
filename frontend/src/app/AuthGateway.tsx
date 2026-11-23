@@ -12,6 +12,23 @@ import {
 } from "lucide-react";
 import { GuidedTour } from "./LearningCenter";
 
+const COMMON_PASSWORDS = new Set([
+  "passwordpassword", "password123456", "123456789012",
+  "qwerty123456", "letmein123456", "adminadminadmin",
+]);
+
+function checkPasswordQuality(value: string, username: string) {
+  const lower = value.toLowerCase();
+  const tooCommon = COMMON_PASSWORDS.has(lower) || /^(.)\\1{11,}$/.test(value) ||
+    (username.length >= 3 && lower.includes(username.toLowerCase()));
+  const lengthOk = value.length >= 12 && value.length <= 128;
+  const groups = [/[a-z]/i, /\\d/, /[^a-z0-9\\s]/i, /\\s/].filter((pattern) => pattern.test(value)).length;
+  const score = !lengthOk ? 0 : tooCommon ? 1 :
+    Math.min(4, 1 + Number(value.length >= 16) + Number(value.length >= 20) + Number(groups >= 2));
+  const label = ["TOO SHORT", "WEAK", "FAIR", "GOOD", "STRONG"][score];
+  return { score, label, lengthOk, tooCommon };
+}
+
 type AuthGatewayProps = {
   activate: boolean;
   busy: boolean;
@@ -42,10 +59,15 @@ export default function AuthGateway({
   onBack,
 }: AuthGatewayProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const quality = checkPasswordQuality(password, username);
+  const passwordsMatch = Boolean(confirmPassword) && password === confirmPassword;
+  const canActivate = quality.lengthOk && !quality.tooCommon && passwordsMatch;
   const graphicRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setShowPassword(false);
+    setConfirmPassword("");
   }, [activate]);
 
   function moveGraphic(event: PointerEvent<HTMLElement>) {
@@ -116,7 +138,7 @@ export default function AuthGateway({
           </div>
           <p className="vb-auth-intro">{activate ? "Accept your invitation. Establish your access." : "Your credentials. Your secure workspace."}</p>
 
-          <form className="vb-auth-form" onSubmit={onSubmit}>
+          <form className="vb-auth-form" onSubmit={(event) => { if (activate && !canActivate) { event.preventDefault(); return; } void onSubmit(event); }}>
             <label className="vb-auth-field">
               <span>01 / USERNAME</span>
               <input required name="username" autoComplete="username" pattern="[a-z0-9][a-z0-9_.-]+" minLength={3} maxLength={80} value={username} onChange={(e) => onUsernameChange(e.target.value.toLowerCase())} placeholder="your.username" />
@@ -136,8 +158,33 @@ export default function AuthGateway({
                 </button>
               </span>
             </label>
+            {activate && (
+              <div className="vb-auth-password-check">
+                <div className="vb-auth-strength-head"><span>LIVE PASSWORD STRENGTH</span><strong>{quality.label}</strong></div>
+                <div className="vb-auth-strength-bars" role="meter" aria-label="Password strength" aria-valuemin={0} aria-valuemax={4} aria-valuenow={quality.score}>
+                  {[0, 1, 2, 3].map((index) => <i key={index} className={quality.score > index ? "active" : ""} />)}
+                </div>
+                <p aria-live="polite">
+                  {!quality.lengthOk ? "Use 12–128 characters; longer passphrases are stronger." :
+                    quality.tooCommon ? "Avoid common patterns or including your username." :
+                    "Length matters most. A unique passphrase is recommended."}
+                </p>
+              </div>
+            )}
+            {activate && (
+              <label className="vb-auth-field">
+                <span>04 / CONFIRM PASSWORD</span>
+                <span className="vb-auth-input-wrap">
+                  <input required name="confirm_password" type={showPassword ? "text" : "password"} autoComplete="new-password" value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Enter the same password again" minLength={12} maxLength={128} />
+                </span>
+                {confirmPassword && <span className={passwordsMatch ? "vb-auth-match is-match" : "vb-auth-match"} role="status" aria-live="polite">
+                  {passwordsMatch ? "PASSWORDS MATCH" : "PASSWORDS DO NOT MATCH"}
+                </span>}
+              </label>
+            )}
             {message && <p className="vb-auth-message" role="status" aria-live="polite">{message}</p>}
-            <button className="vb-auth-submit" disabled={busy} type="submit">
+            <button className="vb-auth-submit" disabled={busy || (activate && !canActivate)} type="submit">
               <span>{busy ? "PROCESSING…" : activate ? "ACTIVATE ACCOUNT" : "ACCESS VEILBENCH"}</span>
               {busy ? <span className="vb-auth-spinner" aria-hidden="true" /> : <ArrowRight size={22} aria-hidden="true" />}
             </button>
