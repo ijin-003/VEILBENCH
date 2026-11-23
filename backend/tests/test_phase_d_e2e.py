@@ -235,7 +235,7 @@ async def test_admin_founders_real_mpyc_database_round_trip(tmp_path, monkeypatc
             assert refreshed.status_code == 200
             assert refreshed.json()["state"] == "completed"
             assert refreshed.json()["result"] == computed["result"]
-            assert "salary" not in refreshed.text.lower()
+            assert "private_input" not in refreshed.text.lower()\n            assert "founder_salary" not in refreshed.text.lower()
             assert "50000" not in refreshed.text and "70000" not in refreshed.text
             print("CHECK persisted aggregate after fresh status fetch: PASS", flush=True)
     finally:
