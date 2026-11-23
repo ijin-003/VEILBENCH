@@ -7,7 +7,7 @@
 
 ## Executive summary
 
-VEILBENCH's genuine 3-party MPyC protocol successfully computes sums and averages using synthetic salaries. The latest previously verified CI benchmark consisted of **one warmup plus six measured sequential runs** on a GitHub Actions Linux runner. Its **median MPC subprocess wall time was 179.73 ms**, mean 181.21 ms, minimum 175.84 ms and nearest-rank p95 / maximum 188.02 ms. The maximum RSS observed for any *single reaped child process* was 29,932 KiB (approximately 29.23 MiB). These values do **not** measure the Render-hosted system, browser latency, PostgreSQL/Neon or three combined party-process memory peaks.
+VEILBENCH's genuine 3-party MPyC protocol successfully computes sums and averages using synthetic salaries. Two completed CI benchmarks each used **one warmup plus six measured sequential runs** on separate GitHub Actions Linux runners. The prior median was **179.73 ms** (mean 181.21 ms); the fresh Phase E run median was **242.20 ms** (mean 239.53 ms). The largest single-child peak RSS was 29,932 KiB on the older run and 30,068 KiB on the new run. Variation across CI workers means neither result should be presented as a production speed guarantee. These values do **not** measure the Render-hosted system, browser latency, PostgreSQL/Neon or three combined party-process memory peaks.
 
 For the hosted Render service, seven available **hourly memory telemetry points** on 2026-11-22 and 2026-11-23 ranged from **67.19 to 103.60 MiB**, with an arithmetic mean of **82.98 MiB across samples**. These points came from **different instances and hours** and are insufficient to estimate the peak memory consumption of a short-lived MPC computation. The same query returned no CPU, HTTP request-count or HTTP latency samples; these metrics are therefore **unavailable**, not zero.
 
@@ -17,7 +17,8 @@ Existing missing-party, cleanup, and restart tests provide evidence for fail-clo
 
 | Evidence | Source | Time / environment |
 |---|---|---|
-| 6-run benchmark with 1 warmup | GitHub Actions run [45075066668](https://github.com/ijin-003/VEILBENCH/actions/runs/45075066668), artifact `veilbench-mpyc-phase-c-metrics` | 2026-11-22; Python 3.11 Linux CI worker; real 3-party local MPyC subprocesses |
+| 6-run historical baseline with 1 warmup | GitHub Actions run [45075066668](https://github.com/ijin-003/VEILBENCH/actions/runs/45075066668) | 2026-11-22; Python 3.11 Linux CI worker; real 3-party local MPyC subprocesses |
+| 6-run Phase E repetition with 1 warmup | [GitHub Actions run 45097787336](https://github.com/ijin-003/VEILBENCH/actions/runs/45097787336), artifact `veilbench-mpyc-phase-c-metrics` with JUnit reliability evidence | 2026-11-23; real local 3-party MPyC subprocesses; 8 recovery tests plus missing-party test passed |
 | Memory telemetry | Connected Render metrics API, service `veilbench-poc-go1d` (`srv-dc1h06rl550s73efug7g`) | 2026-11-22 16:00–22:00 UTC, 2026-11-23 01:00 UTC; hourly points, multiple instance IDs |
 | Hosted app status | Render deployment `dep-dc1mee942hec73aokjg0` reports live; frontend Vercel deployment READY | Status checked 2026-11-23 |
 | Authenticated complete computation | CI [Phase D full-stack acceptance](https://github.com/ijin-003/VEILBENCH/actions/runs/45095940979) | 2026-11-23; temporary PostgreSQL, real local HTTP party services and actual MPyC subprocesses |
@@ -27,19 +28,19 @@ Existing missing-party, cleanup, and restart tests provide evidence for fail-clo
 
 ### 1.1 Local MPyC compute timing
 
-| Statistic | Observed |
-|---|---:|
-| Warmup iterations | 1 |
-| Measured iterations | 6 |
-| Minimum | 175.84 ms |
-| Median | 179.73 ms |
-| Arithmetic mean | 181.21 ms |
-| Nearest-rank p95 | 188.02 ms |
-| Maximum | 188.02 ms |
-| Correctness | All 6 measured computations validated |
-| Largest individual child peak RSS | 29,932 KiB (approximately 29.23 MiB) |
+| Statistic | Earlier CI run, 2026-11-22 | Phase E CI run, 2026-11-23 |
+|---|---:|---:|
+| Warmup iterations | 1 | 1 |
+| Measured iterations | 6 | 6 |
+| Minimum | 175.84 ms | 222.18 ms |
+| Median | 179.73 ms | 242.20 ms |
+| Arithmetic mean | 181.21 ms | 239.53 ms |
+| Nearest-rank p95 | 188.02 ms | 259.01 ms |
+| Maximum | 188.02 ms | 259.01 ms |
+| Correctness | All 6 measured computations validated | All 6 measured computations validated |
+| Largest individual child peak RSS | 29,932 KiB | 30,068 KiB |
 
-Nearest-rank p95 on six values equals their largest measured observation and is **not** a reliable production p95 estimate; report it as a descriptive sample statistic only. The six samples do not establish scalable throughput, a service-level objective or statistical confidence bounds.
+Nearest-rank p95 on just six values equals the largest observed value in each run and is **not** a reliable production p95 estimate; report it as a descriptive sample statistic only. The six samples do not establish scalable throughput, a service-level objective or statistical confidence bounds.
 
 ### 1.2 Render memory samples
 
@@ -92,17 +93,17 @@ The one successful website demonstration confirmed the result, but no timestampe
 ## 4. Acceptance criteria and assessment
 
 - [x] Real local MPyC wall-time baseline measured with synthetic values.
-- [x] Aggregate correctness verified across all six local benchmark runs.
+- [x] Aggregate correctness verified across both sets of six local benchmark runs.
 - [x] Local disconnected-party safety check previously passed.
 - [x] Hosted memory observations collected with units and timestamps.
 - [x] Authenticated three-party Phase D local full-stack success previously verified.
-- [ ] Phase E extended cleanup/restart workflow on this PR — check its latest CI run and original JUnit.
+- [x] Phase E extended cleanup/restart CI: eight focused recovery tests passed; missing-party test passed. [Original workflow](https://github.com/ijin-003/VEILBENCH/actions/runs/45097787336).
 - [ ] At least three **measured** hosted `Server-Timing` observations.
 - [ ] At least three browser-observed computation request timings.
 - [ ] Final hosted-to-local comparison with clear difference in measurement scope.
 
 ## 5. Interpretation for academic defense
 
-**Supported conclusion:** VEILBENCH demonstrated correct three-party secure summation with low local subprocess latency on CI, protected against a missing participant by failing to finish rather than exposing partial aggregate data, and provided recovery/replay protections covered by regression tests. Memory telemetry confirms the hosted service emitted some observable resource samples, but *not* the memory used by a specific computation.
+**Supported conclusion:** VEILBENCH demonstrated correct three-party secure summation with local subprocess medians of 179.73 and 242.20 ms across two CI runs, protected against a missing participant by failing to finish rather than exposing partial aggregate data, and provided recovery/replay protections covered by regression tests. Memory telemetry confirms the hosted service emitted some observable resource samples, but *not* the memory used by a specific computation.
 
-**Unsupported conclusion:** That the deployed application computes every benchmark in ~180 ms, stays under 104 MiB at all times, reaches 95% of requests within 188 ms, automatically recovers from node failures or tolerates one physically compromised independent MPC operator on the shared demo host.
+**Unsupported conclusion:** That the deployed application computes every benchmark in ~180–242 ms, stays under 104 MiB at all times, reaches 95% of requests within 188 ms, automatically recovers from node failures or tolerates one physically compromised independent MPC operator on the shared demo host.
