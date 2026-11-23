@@ -9,7 +9,8 @@
       "2026-11-22T00:00:00Z",
       "2026-11-23T01:40:00Z"
     ],
-    "render_resolution_seconds": 3600
+    "render_resolution_seconds": 3600,
+    "phase_e_ci_run_url": "https://github.com/ijin-003/VEILBENCH/actions/runs/45097787336"
   },
   "ci_mpyc_local": {
     "warmups": 1,
@@ -62,5 +63,21 @@
     "instance_count"
   ],
   "hosted_compute_server_timing_ms": [],
-  "note": "No hosted computation timing is claimed; Render hourly memory samples are sparse and not MPC peak RSS."
+  "note": "Comparative CI benchmarks vary by runner; hosted timing not yet measured. Render memory sampling is sparse and not MPC peak RSS.",
+  "ci_mpyc_local_2026_11_23": {
+    "warmups": 1,
+    "measured_runs": 6,
+    "latency_ms": {
+      "min": 222.18,
+      "median": 242.2,
+      "mean": 239.53,
+      "p95_nearest_rank": 259.01,
+      "max": 259.01
+    },
+    "max_single_child_peak_rss_kib": 30068,
+    "all_correct": true,
+    "reliability_tests_passed": 8,
+    "missing_party_test_passed": true,
+    "scope": "Separate GitHub Actions Linux runner; subprocess time only"
+  }
 }
