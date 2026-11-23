@@ -31,6 +31,27 @@ type SessionData = {
   founder_invites?: FounderInvite[];
 };
 
+type AccountRecord = {
+  username: string;
+  role: string;
+  created_at: string | null;
+  activation_status: "active" | "invited" | "expired";
+  benchmark_id: string | null;
+  party_id: number | null;
+  invitation_expiry: number | null;
+};
+type AccountDirectory = { accounts: AccountRecord[]; total: number };
+type SessionDirectory = { sessions: SessionData[]; total: number };
+const DIRECTORY_PAGE_SIZE = 30;
+function remainingTime(expiry: string, clockMs: number): string {
+  const seconds = Math.max(0, Math.ceil((Date.parse(expiry) - clockMs) / 1000));
+  if (!Number.isFinite(seconds) || seconds <= 0) return "EXPIRED";
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const tail = String(seconds % 60).padStart(2, "0");
+  return hours ? `${hours}h ${String(minutes).padStart(2, "0")}m ${tail}s` : `${minutes}m ${tail}s`;
+}
+
 const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "https://localhost:8000").replace(/\/+$/, "");
 const POLL_INTERVAL_MS = 4000;
 const FINISHED = new Set(["completed", "failed", "expired"]);
@@ -47,6 +68,14 @@ export default function AdminDashboard({ token }: { token: string }) {
   const [pollWarning, setPollWarning] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [resultOpen, setResultOpen] = useState(true);
+  const [accountDirectory, setAccountDirectory] = useState<AccountDirectory | null>(null);
+  const [sessionDirectory, setSessionDirectory] = useState<SessionDirectory | null>(null);
+  const [directoryError, setDirectoryError] = useState<string | null>(null);
+  const [directoryBusy, setDirectoryBusy] = useState(false);
+  const [accountOffset, setAccountOffset] = useState(0);
+  const [sessionOffset, setSessionOffset] = useState(0);
+  const [sessionScope, setSessionScope] = useState<"active" | "all">("active");
+  const [clockMs, setClockMs] = useState(0);
   const [copyMessage, setCopyMessage] = useState("");
   const drawerRef = useRef<HTMLElement>(null);
   const drawerButtonRef = useRef<HTMLButtonElement>(null);
@@ -96,6 +125,60 @@ export default function AdminDashboard({ token }: { token: string }) {
     if (!response.ok) throw new Error(data.detail || `Request failed (HTTP ${response.status})`);
     return data as SessionData;
   }, [token]);
+
+  const directoryRequest = useCallback(async (path: string): Promise<unknown> => {
+    const response = await fetch(`${apiUrl}/api/v1${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store", credentials: "omit", referrerPolicy: "no-referrer",
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || `Directory request failed (HTTP ${response.status})`);
+    return data;
+  }, [token]);
+
+  const refreshDirectories = useCallback(async () => {
+    setDirectoryBusy(true);
+    try {
+      const [accounts, sessions] = await Promise.all([
+        directoryRequest(`/accounts?limit=${DIRECTORY_PAGE_SIZE}&offset=${accountOffset}`),
+        directoryRequest(`/sessions?scope=${sessionScope}&limit=${DIRECTORY_PAGE_SIZE}&offset=${sessionOffset}`),
+      ]);
+      setAccountDirectory(accounts as AccountDirectory);
+      setSessionDirectory(sessions as SessionDirectory);
+      setDirectoryError(null);
+    } catch (cause) {
+      setDirectoryError(cause instanceof Error ? cause.message : "Could not load account/session directories");
+    } finally {
+      setDirectoryBusy(false);
+    }
+  }, [directoryRequest, accountOffset, sessionOffset, sessionScope]);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    setClockMs(Date.now());
+    void refreshDirectories();
+    const timer = setInterval(() => { setClockMs(Date.now()); }, 1000);
+    const refresh = setInterval(() => { void refreshDirectories(); }, 15000);
+    return () => { clearInterval(timer); clearInterval(refresh); };
+  }, [drawerOpen, refreshDirectories]);
+
+  async function openListedSession(id: string) {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const opened = await managementRequest(`/sessions/${encodeURIComponent(id)}`, "GET");
+      setSession((current) => ({ ...opened,
+        founder_invites: current?.session_id === id ? current.founder_invites : undefined }));
+      setResultOpen(true);
+      setPollWarning(null);
+      setDrawerOpen(false);
+    } catch (cause) {
+      setDirectoryError(cause instanceof Error ? cause.message : "Could not open session");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function createSession(event?: FormEvent) {
     event?.preventDefault();
@@ -273,18 +356,67 @@ export default function AdminDashboard({ token }: { token: string }) {
               <form onSubmit={loadSession} className="ch-load-form"><label htmlFor="ch-session-id-lookup">LOAD EXISTING SESSION</label><div><input id="ch-session-id-lookup" value={lookupId} onChange={(event) => setLookupId(event.target.value)} placeholder="Session ID" autoComplete="off"/><button type="submit" aria-label="Load session" disabled={!lookupId.trim() || busy}><ArrowRight size={17}/></button></div></form>
               {session && <div className="ch-session-meta"><small>CURRENT SESSION</small><div><code>{session.session_id}</code><button type="button" onClick={() => void copyId()} aria-label="Copy session ID"><ClipboardCopy size={16}/></button></div><small>EXPIRES: {new Date(session.expires_at).toLocaleString()}</small><small>STATE: {session.state.toUpperCase()}</small>{copyMessage && <p role="status">{copyMessage}</p>}</div>}
             </section>
+            <section className="ch-tool-section" aria-label="Session directory">
+              <div className="ch-tool-heading"><span>02</span><h3>SESSION DIRECTORY</h3></div>
+              <div className="ch-directory-controls">
+                <button type="button" aria-pressed={sessionScope === "active"} className={sessionScope === "active" ? "is-active" : ""} onClick={() => { setSessionOffset(0); setSessionScope("active"); }}>ACTIVE</button>
+                <button type="button" aria-pressed={sessionScope === "all"} className={sessionScope === "all" ? "is-active" : ""} onClick={() => { setSessionOffset(0); setSessionScope("all"); }}>HISTORY</button>
+                <button type="button" aria-label="Refresh directories" onClick={() => void refreshDirectories()} disabled={directoryBusy}><RefreshCw size={14} /></button>
+              </div>
+              <p>Session timers update live. Select a session to see its latest founder-submission status.</p>
+              <div className="ch-directory-list" role="list" aria-label="Benchmark sessions">
+                {sessionDirectory?.sessions.map((item) => (
+                  <div className="ch-directory-entry" key={item.session_id} role="listitem">
+                    <div className="ch-directory-entry-top"><strong>{item.state.toUpperCase()}</strong>
+                      <time dateTime={item.expires_at} className="ch-directory-clock">{remainingTime(item.expires_at, clockMs)}</time></div>
+                    <code title={item.session_id}>{item.session_id}</code>
+                    <small>{item.submitted_party_ids.length} / 3 submissions · Created {new Date(item.created_at).toLocaleString()}</small>
+                    <button type="button" disabled={busy} onClick={() => void openListedSession(item.session_id)}>OPEN SESSION <ArrowRight size={14}/></button>
+                  </div>
+                ))}
+                {sessionDirectory && sessionDirectory.sessions.length === 0 && <p>No {sessionScope === "active" ? "active" : "recorded"} sessions.</p>}
+                {!sessionDirectory && !directoryError && <p>Loading sessions…</p>}
+              </div>
+              {sessionDirectory && <div className="ch-directory-pages">
+                <span>{sessionDirectory.total} total · {(sessionDirectory.total ? sessionOffset + 1 : 0)}–{Math.min(sessionOffset + DIRECTORY_PAGE_SIZE, sessionDirectory.total)}</span>
+                <button type="button" onClick={() => setSessionOffset(Math.max(0, sessionOffset - DIRECTORY_PAGE_SIZE))} disabled={sessionOffset === 0}>PREV</button>
+                <button type="button" onClick={() => setSessionOffset(sessionOffset + DIRECTORY_PAGE_SIZE)} disabled={sessionOffset + DIRECTORY_PAGE_SIZE >= sessionDirectory.total}>NEXT</button>
+              </div>}
+            </section>
+            <section className="ch-tool-section" aria-label="Registered account directory">
+              <div className="ch-tool-heading"><span>03</span><h3>ACCOUNT DIRECTORY</h3></div>
+              <p>All invited and activated accounts; no passwords, invitation tokens, or private salary values.</p>
+              <div className="ch-directory-list" role="list" aria-label="Registered and invited users">
+                {accountDirectory?.accounts.map((item) => (
+                  <div className="ch-directory-entry ch-account-entry" role="listitem" key={item.username}>
+                    <div className="ch-directory-entry-top"><strong>{item.username}</strong><span className="ch-directory-account-status">{item.activation_status.toUpperCase()}</span></div>
+                    <small>{item.role.toUpperCase()} {item.party_id !== null ? `· FOUNDER ${item.party_id + 1}` : ""}</small>
+                    <small>Invitation created: {item.created_at ? new Date(item.created_at).toLocaleString() : "Not recorded (legacy account)"}</small>
+                    {item.benchmark_id && <code title={item.benchmark_id}>Session: {item.benchmark_id}</code>}
+                  </div>
+                ))}
+                {accountDirectory && accountDirectory.accounts.length === 0 && <p>No accounts found.</p>}
+                {!accountDirectory && !directoryError && <p>Loading accounts…</p>}
+              </div>
+              {accountDirectory && <div className="ch-directory-pages">
+                <span>{accountDirectory.total} accounts</span>
+                <button type="button" onClick={() => setAccountOffset(Math.max(0, accountOffset - DIRECTORY_PAGE_SIZE))} disabled={accountOffset === 0}>PREV</button>
+                <button type="button" onClick={() => setAccountOffset(accountOffset + DIRECTORY_PAGE_SIZE)} disabled={accountOffset + DIRECTORY_PAGE_SIZE >= accountDirectory.total}>NEXT</button>
+              </div>}
+              {directoryError && <p role="alert" className="ch-directory-error">{directoryError}</p>}
+            </section>
             <section className="ch-tool-section">
-              <div className="ch-tool-heading"><span>02</span><h3>CONNECTION</h3></div>
+              <div className="ch-tool-heading"><span>04</span><h3>CONNECTION</h3></div>
               <p>{health ? `${health.service} · v${health.version}` : "Backend connection not verified"}</p><p>Storage: {health?.session_storage || "unknown"}</p>
               <button type="button" className="ch-drawer-action ch-drawer-action--subtle" onClick={() => void checkHealth()} disabled={healthLoading}><RefreshCw size={16}/> RECHECK CONNECTION</button>
             </section>
             {session && !FINISHED.has(state) && <section className="ch-tool-section">
-              <div className="ch-tool-heading"><span>03</span><h3>PRIVATE INVITATIONS</h3></div>
+              <div className="ch-tool-heading"><span>05</span><h3>PRIVATE INVITATIONS</h3></div>
               <p>Issue one separate account invitation per founder. Send credentials privately, never in a public channel.</p>
               {PARTY_IDS.map((partyId) => <div key={`${session.session_id}-${partyId}`} className="ch-invite-card"><h4>FOUNDER 0{partyId + 1}</h4><AccountInvite token={token} sessionId={session.session_id} partyId={partyId}/></div>)}
             </section>}
             <section className="ch-tool-section">
-              <div className="ch-tool-heading"><span>04</span><h3>PROTOCOL EXPLAINER</h3></div>
+              <div className="ch-tool-heading"><span>06</span><h3>PROTOCOL EXPLAINER</h3></div>
               <details className="ch-drawer-guide"><summary>HOW THE THREE-PARTY COMPUTATION WORKS</summary><div><ProtocolWalkthrough /></div></details>
             </section>
           </div>
