@@ -27,6 +27,22 @@ jobs:
         run: python -m scripts.benchmark_mpyc_phase_c --runs 6 --warmup 1
       - name: Run existing disconnected-party safety regression
         run: python -m pytest backend/tests/test_mpyc_protocol.py -k disconnected_party_handling -q
+      - name: Validate cleanup and restart reliability controls
+        run: >-
+          python -m pytest
+          backend/tests/test_distributed.py
+          backend/tests/test_hardening.py
+          backend/tests/test_party_state_store.py
+          backend/tests/test_coordinator_process_cleanup.py
+          -k "shutdown_retries_until_all_parties_confirm_cleanup or
+          cleanup_failure_requires_operator_recovery or
+          operator_recovery_releases_barrier_after_all_parties_confirm or
+          operator_recovery_keeps_barrier_if_cleanup_is_unconfirmed or
+          restarted_party_state_fails_session_closed or
+          founder_capability_replay_is_rejected_after_party_restart or
+          state_survives_store_recreation or
+          legacy_runner_timeout_kills_reaps_and_drains_all_processes"
+          -q
       - name: Upload benchmark evidence
         if: always()
         uses: actions/upload-artifact@v4
