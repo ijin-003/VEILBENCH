@@ -34,7 +34,6 @@ type SessionData = {
 const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "https://localhost:8000").replace(/\/+$/, "");
 const POLL_INTERVAL_MS = 4000;
 const FINISHED = new Set(["completed", "failed", "expired"]);
-const numberFormat = new Intl.NumberFormat("en-PK", { maximumFractionDigits: 2 });
 const PARTY_IDS = [0, 1, 2] as const;
 
 export default function AdminDashboard({ token }: { token: string }) {
