@@ -44,7 +44,6 @@ jobs:
           VEILBENCH_E2E_DATABASE_URL: "postgresql+asyncpg://synthetic:synthetic-only-ci-password@127.0.0.1:5432/veilbench_e2e"
           PYTHONUNBUFFERED: "1"
           NO_PROXY: "127.0.0.1,localhost"
-          no_proxy: "127.0.0.1,localhost"
         run: python -m pytest backend/tests/test_phase_d_e2e.py -v -s -o addopts="--asyncio-mode=auto" --junitxml=phase-d-results.xml
       - name: Upload evidence
         if: always()
