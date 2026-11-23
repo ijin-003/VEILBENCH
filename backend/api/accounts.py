@@ -23,6 +23,22 @@ Admin = Annotated[Account, Depends(admin_account)]
 # Same password workload for unknown users, without persisting a usable credential.
 _DUMMY_HASH = hash_password(secrets.token_urlsafe(32))
 
+# Activation only: keep existing logins compatible; never echo weak passwords.
+_COMMON_PASSWORDS = frozenset({
+    "passwordpassword", "password123456", "123456789012",
+    "qwerty123456", "letmein123456", "adminadminadmin",
+})
+
+
+def weak_new_password(password: str, username: str) -> bool:
+    lower = password.lower()
+    return (
+        lower in _COMMON_PASSWORDS
+        or (len(username) >= 3 and username.lower() in lower)
+        or len(set(password)) == 1
+    )
+
+
 
 class Credentials(BaseModel):
     username: str = Field(min_length=3, max_length=80, pattern=r"^[a-z0-9][a-z0-9_.-]+$")
@@ -89,6 +105,8 @@ async def login(body: Credentials, response: Response, db: Db, request: Request)
 @router.post("/activate")
 async def activate(body: Activation, db: Db, request: Request):
     await auth_throttle.enforce(request, action="activation", username=body.username)
+    if weak_new_password(body.password, body.username):
+        raise HTTPException(400, "Choose a unique password; avoid common strings or your username")
     account = await db.scalar(select(Account).where(Account.username == body.username).with_for_update())
     now = int(time.time())
     if not account or account.password_hash or not account.invitation_hash or account.invitation_expiry <= now or account.locked_until > now or not secrets.compare_digest(digest(body.invitation), account.invitation_hash):
