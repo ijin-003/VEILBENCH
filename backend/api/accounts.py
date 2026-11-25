@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, Header, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select, delete, func
 from sqlalchemy.exc import IntegrityError
 from starlette.concurrency import run_in_threadpool
@@ -51,6 +51,7 @@ class Activation(Credentials):
 
 class AccountSummary(BaseModel):
     username: str
+    display_name: str | None = None
     role: str
     created_at: datetime | None
     activation_status: str
@@ -65,13 +66,25 @@ class AccountDirectory(BaseModel):
 
 
 class Invite(BaseModel):
-    username: str = Field(min_length=3, max_length=80, pattern=r"^[a-z0-9][a-z0-9_.-]+$")
+    username: str | None = Field(default=None, min_length=3, max_length=80, pattern=r"^[a-z0-9][a-z0-9_.-]+$")
+    display_name: str | None = Field(default=None, min_length=1, max_length=80)
+
+    @model_validator(mode="after")
+    def validate_identity(self):
+        if self.display_name is not None:
+            self.display_name = self.display_name.strip()
+            if not self.display_name or any(ord(c) < 32 or ord(c) == 127 for c in self.display_name):
+                raise ValueError("Enter a valid founder name")
+        if not self.username and not self.display_name:
+            raise ValueError("Enter a founder name or login username")
+        return self
     session_id: str = Field(max_length=36)
     party_id: int = Field(ge=0, le=2)
 
 
 def expiry(record: BenchmarkSession) -> int:
-    return int(record.expires_at.replace(tzinfo=timezone.utc).timestamp())
+    value = record.expires_at
+    return int((value if value.tzinfo else value.replace(tzinfo=timezone.utc)).timestamp())
 
 
 async def record_failure(db, account):
@@ -129,18 +142,26 @@ async def logout(db: Db, account: Member, authorization: Annotated[str, Header()
 
 @router.post("/invitations", status_code=201)
 async def invite(body: Invite, response: Response, db: Db, admin: Admin):
-    benchmark = await db.get(BenchmarkSession, body.session_id)
-    if not benchmark or expiry(benchmark) <= int(time.time()) or benchmark.state != "created" or body.party_id in (benchmark.submitted_party_ids or []):
-        raise HTTPException(409, "Choose an active session with an unassigned participant")
+    benchmark = await db.scalar(select(BenchmarkSession).where(BenchmarkSession.id == body.session_id).with_for_update())
+    if not benchmark:
+        raise HTTPException(404, "Benchmark session not found")
+    if expiry(benchmark) <= int(time.time()) or benchmark.state != "created":
+        raise HTTPException(409, "This session is closed or expired. Create or open an active session.")
+    occupied = await db.scalar(select(Account.username).where(Account.benchmark_id == body.session_id, Account.party_id == body.party_id))
+    if occupied or body.party_id in (benchmark.submitted_party_ids or []):
+        raise HTTPException(409, "This founder slot is already assigned. Choose another slot.")
+    username = body.username or ("founder-" + secrets.token_hex(8))
+    if await db.get(Account, username):
+        raise HTTPException(409, "This login username already exists. Use a different login username or a founder display name.")
     token = secrets.token_urlsafe(32)
-    db.add(Account(username=body.username, role="participant", invitation_hash=digest(token), invitation_expiry=expiry(benchmark), benchmark_id=body.session_id, party_id=body.party_id))
+    db.add(Account(username=username, display_name=body.display_name, role="participant", invitation_hash=digest(token), invitation_expiry=expiry(benchmark), benchmark_id=body.session_id, party_id=body.party_id))
     try:
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        raise HTTPException(409, "Username or session party already assigned") from None
+        raise HTTPException(409, "The login or founder slot was assigned concurrently. Refresh and try again.") from None
     response.headers["Cache-Control"] = "no-store"
-    return {"username": body.username, "invitation": token}
+    return {"username": username, "display_name": body.display_name, "invitation": token}
 
 
 @router.get("/assignment")
@@ -185,6 +206,7 @@ async def list_accounts(
         accounts=[
             AccountSummary(
                 username=account.username,
+                display_name=account.display_name,
                 role=account.role,
                 created_at=account.created_at,
                 activation_status=(
