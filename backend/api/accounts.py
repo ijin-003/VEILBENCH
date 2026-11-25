@@ -164,6 +164,37 @@ async def invite(body: Invite, response: Response, db: Db, admin: Admin):
     return {"username": username, "display_name": body.display_name, "invitation": token}
 
 
+class ReissueInvitation(BaseModel):
+    session_id: str = Field(max_length=36)
+    party_id: int = Field(ge=0, le=2)
+
+
+@router.post("/invitations/reissue", status_code=201)
+async def reissue_invitation(body: ReissueInvitation, response: Response, db: Db, admin: Admin):
+    """Rotate an unused invitation without changing the founder's identity."""
+    benchmark = await db.scalar(select(BenchmarkSession).where(
+        BenchmarkSession.id == body.session_id).with_for_update())
+    if not benchmark:
+        raise HTTPException(404, "Benchmark session not found")
+    if expiry(benchmark) <= int(time.time()) or benchmark.state != "created":
+        raise HTTPException(409, "This session is closed or expired. Create a new session.")
+    account = await db.scalar(select(Account).where(
+        Account.benchmark_id == body.session_id, Account.party_id == body.party_id
+    ).with_for_update())
+    if not account:
+        raise HTTPException(404, "No invitation exists for this founder slot")
+    if account.role != "participant" or account.password_hash or body.party_id in (benchmark.submitted_party_ids or []):
+        raise HTTPException(409, "An activated or submitted account cannot receive a replacement invitation")
+    token = secrets.token_urlsafe(32)
+    account.invitation_hash = digest(token)
+    account.invitation_expiry = expiry(benchmark)
+    account.failures = 0
+    account.locked_until = 0
+    await db.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return {"username": account.username, "display_name": account.display_name, "invitation": token}
+
+
 @router.get("/assignment")
 async def assignment(response: Response, db: Db, account: Member):
     if account.role != "participant":
