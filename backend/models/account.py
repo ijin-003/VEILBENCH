@@ -9,6 +9,7 @@ class Account(Base):
     __tablename__ = "accounts"
     __table_args__ = (UniqueConstraint("benchmark_id", "party_id"),)
     username: Mapped[str] = mapped_column(String(80), primary_key=True)
+    display_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
     role: Mapped[str] = mapped_column(String(16), nullable=False)
     # Legacy rows predate this field; do not invent their historical signup dates.
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=True)
