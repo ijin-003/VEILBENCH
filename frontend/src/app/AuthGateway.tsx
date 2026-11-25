@@ -19,10 +19,10 @@ const COMMON_PASSWORDS = new Set([
 
 function checkPasswordQuality(value: string, username: string) {
   const lower = value.toLowerCase();
-  const tooCommon = COMMON_PASSWORDS.has(lower) || /^(.)\\1{11,}$/.test(value) ||
+  const tooCommon = COMMON_PASSWORDS.has(lower) || (value.length > 0 && new Set(value).size === 1) ||
     (username.length >= 3 && lower.includes(username.toLowerCase()));
   const lengthOk = value.length >= 12 && value.length <= 128;
-  const groups = [/[a-z]/i, /\\d/, /[^a-z0-9\\s]/i, /\\s/].filter((pattern) => pattern.test(value)).length;
+  const groups = [/[a-z]/i, /\d/, /[^a-z0-9\s]/i, /\s/].filter((pattern) => pattern.test(value)).length;
   const score = !lengthOk ? 0 : tooCommon ? 1 :
     Math.min(4, 1 + Number(value.length >= 16) + Number(value.length >= 20) + Number(groups >= 2));
   const label = ["TOO SHORT", "WEAK", "FAIR", "GOOD", "STRONG"][score];
@@ -62,7 +62,9 @@ export default function AuthGateway({
   const [confirmPassword, setConfirmPassword] = useState("");
   const quality = checkPasswordQuality(password, username);
   const passwordsMatch = Boolean(confirmPassword) && password === confirmPassword;
-  const canActivate = quality.lengthOk && !quality.tooCommon && passwordsMatch;
+  const validUsername = /^[a-z0-9][a-z0-9_.-]{2,79}$/.test(username);
+  const validInvitation = /^[A-Za-z0-9_-]{20,128}$/.test(invitation);
+  const canActivate = validUsername && validInvitation && quality.lengthOk && !quality.tooCommon && passwordsMatch;
   const graphicRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -146,7 +148,7 @@ export default function AuthGateway({
             {activate && (
               <label className="vb-auth-field">
                 <span>02 / INVITATION CODE</span>
-                <input required name="invitation" type="password" autoComplete="off" value={invitation} onChange={(e) => onInvitationChange(e.target.value)} placeholder="Enter your invitation code" />
+                <input required name="invitation" type="password" autoComplete="off" minLength={20} maxLength={128} value={invitation} onChange={(e) => onInvitationChange(e.target.value)} placeholder="Enter your invitation code" />
               </label>
             )}
             <label className="vb-auth-field">
@@ -184,7 +186,7 @@ export default function AuthGateway({
               </label>
             )}
             {message && <p className="vb-auth-message" role="status" aria-live="polite">{message}</p>}
-            <button className="vb-auth-submit" disabled={busy || (activate && !canActivate)} type="submit">
+            <button className="vb-auth-submit" disabled={busy || !validUsername || !quality.lengthOk || (activate && !canActivate)} type="submit">
               <span>{busy ? "PROCESSING…" : activate ? "ACTIVATE ACCOUNT" : "ACCESS VEILBENCH"}</span>
               {busy ? <span className="vb-auth-spinner" aria-hidden="true" /> : <ArrowRight size={22} aria-hidden="true" />}
             </button>
