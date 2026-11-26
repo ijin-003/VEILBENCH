@@ -32,3 +32,44 @@ jobs:
         run: python -m compileall -q backend scripts
       - name: Run full backend tests
         run: python -m pytest backend/tests -o addopts="--asyncio-mode=auto" -q
+
+  full-stack-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: synthetic
+          POSTGRES_PASSWORD: synthetic-only-ci-password
+          POSTGRES_DB: veilbench_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U synthetic -d veilbench_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install test dependencies
+        run: python -m pip install -r backend/requirements.txt
+      - name: Exercise 3-party MPC with fresh PostgreSQL accounts
+        env:
+          VEILBENCH_E2E_LOCAL: "1"
+          VEILBENCH_E2E_DATABASE_URL: "postgresql+asyncpg://synthetic:synthetic-only-ci-password@127.0.0.1:5432/veilbench_e2e"
+          NO_PROXY: "127.0.0.1,localhost"
+          PYTHONUNBUFFERED: "1"
+        run: python -m pytest backend/tests/test_phase_d_e2e.py -v -s -o addopts="--asyncio-mode=auto" --junitxml=phase-d-results.xml
+      - name: Upload full-stack evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-d-acceptance-evidence
+          path: phase-d-results.xml
+          if-no-files-found: warn
