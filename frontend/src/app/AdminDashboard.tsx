@@ -33,6 +33,7 @@ type SessionData = {
 
 type AccountRecord = {
   username: string;
+  display_name?: string | null;
   role: string;
   created_at: string | null;
   activation_status: "active" | "invited" | "expired";
@@ -75,10 +76,11 @@ export default function AdminDashboard({ token }: { token: string }) {
   const [accountOffset, setAccountOffset] = useState(0);
   const [sessionOffset, setSessionOffset] = useState(0);
   const [sessionScope, setSessionScope] = useState<"active" | "all">("active");
-  const [clockMs, setClockMs] = useState(0);
+  const [clockMs, setClockMs] = useState(() => Date.now());
   const [copyMessage, setCopyMessage] = useState("");
   const drawerRef = useRef<HTMLElement>(null);
   const drawerButtonRef = useRef<HTMLButtonElement>(null);
+  const directorySeqRef = useRef(0);
 
   const requestHealth = useCallback(async (signal?: AbortSignal): Promise<HealthData> => {
     const response = await fetch(`${apiUrl}/health`, {
@@ -137,29 +139,33 @@ export default function AdminDashboard({ token }: { token: string }) {
   }, [token]);
 
   const refreshDirectories = useCallback(async () => {
+    const seq = ++directorySeqRef.current;
     setDirectoryBusy(true);
     try {
       const [accounts, sessions] = await Promise.all([
         directoryRequest(`/accounts?limit=${DIRECTORY_PAGE_SIZE}&offset=${accountOffset}`),
         directoryRequest(`/sessions?scope=${sessionScope}&limit=${DIRECTORY_PAGE_SIZE}&offset=${sessionOffset}`),
       ]);
+      if (seq !== directorySeqRef.current) return;
       setAccountDirectory(accounts as AccountDirectory);
       setSessionDirectory(sessions as SessionDirectory);
       setDirectoryError(null);
     } catch (cause) {
+      if (seq !== directorySeqRef.current) return;
       setDirectoryError(cause instanceof Error ? cause.message : "Could not load account/session directories");
     } finally {
-      setDirectoryBusy(false);
+      if (seq === directorySeqRef.current) {
+        setDirectoryBusy(false);
+      }
     }
   }, [directoryRequest, accountOffset, sessionOffset, sessionScope]);
 
   useEffect(() => {
     if (!drawerOpen) return;
-    setClockMs(Date.now());
-    void refreshDirectories();
+    const initial = setTimeout(() => { void refreshDirectories(); }, 0);
     const timer = setInterval(() => { setClockMs(Date.now()); }, 1000);
     const refresh = setInterval(() => { void refreshDirectories(); }, 15000);
-    return () => { clearInterval(timer); clearInterval(refresh); };
+    return () => { clearTimeout(initial); clearInterval(timer); clearInterval(refresh); };
   }, [drawerOpen, refreshDirectories]);
 
   async function openListedSession(id: string) {
@@ -264,7 +270,7 @@ export default function AdminDashboard({ token }: { token: string }) {
   const canCompute = state === "ready" && submittedCount === 3 && !busy && !computePending;
   const isComputing = computePending || state === "computing";
   const complete = state === "completed" && Boolean(session?.result);
-  const isConnected = health?.status.toLowerCase() === "ok";
+  const isConnected = health?.status.toLowerCase() === "healthy" || health?.status.toLowerCase() === "ok";
   const fault = state === "failed" || state === "expired";
 
   async function compute() {
@@ -280,6 +286,21 @@ export default function AdminDashboard({ token }: { token: string }) {
       setError(cause instanceof Error ? cause.message : "Computation could not start");
     } finally {
       setComputePending(false);
+      setBusy(false);
+    }
+  }
+
+  async function recoverSession() {
+    if (!sessionId || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const next = await managementRequest(`/sessions/${encodeURIComponent(sessionId)}/recover`, "POST");
+      setSession((current) => current ? { ...next, founder_invites: current.founder_invites } : next);
+      void refreshDirectories();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Recovery failed");
+    } finally {
       setBusy(false);
     }
   }
@@ -354,7 +375,7 @@ export default function AdminDashboard({ token }: { token: string }) {
               <div className="ch-tool-heading"><span>01</span><h3>MANAGE SESSION</h3></div>
               <button type="button" className="ch-drawer-action" onClick={() => void createSession()} disabled={busy}><Plus size={16}/> CREATE NEW 30-MIN SESSION</button>
               <form onSubmit={loadSession} className="ch-load-form"><label htmlFor="ch-session-id-lookup">LOAD EXISTING SESSION</label><div><input id="ch-session-id-lookup" value={lookupId} onChange={(event) => setLookupId(event.target.value)} placeholder="Session ID" autoComplete="off"/><button type="submit" aria-label="Load session" disabled={!lookupId.trim() || busy}><ArrowRight size={17}/></button></div></form>
-              {session && <div className="ch-session-meta"><small>CURRENT SESSION</small><div><code>{session.session_id}</code><button type="button" onClick={() => void copyId()} aria-label="Copy session ID"><ClipboardCopy size={16}/></button></div><small>EXPIRES: {new Date(session.expires_at).toLocaleString()}</small><small>STATE: {session.state.toUpperCase()}</small>{copyMessage && <p role="status">{copyMessage}</p>}</div>}
+              {session && <div className="ch-session-meta"><small>CURRENT SESSION</small><div><code>{session.session_id}</code><button type="button" onClick={() => void copyId()} aria-label="Copy session ID"><ClipboardCopy size={16}/></button></div><small>EXPIRES: {new Date(session.expires_at).toLocaleString()}</small><small>STATE: {session.state.toUpperCase()}</small>{state === "computing" && <button type="button" className="ch-drawer-action ch-drawer-action--subtle" disabled={busy} onClick={() => void recoverSession()}>RECOVER STUCK SESSION</button>}{copyMessage && <p role="status">{copyMessage}</p>}</div>}
             </section>
             <section className="ch-tool-section" aria-label="Session directory">
               <div className="ch-tool-heading"><span>02</span><h3>SESSION DIRECTORY</h3></div>
@@ -368,7 +389,11 @@ export default function AdminDashboard({ token }: { token: string }) {
                 {sessionDirectory?.sessions.map((item) => (
                   <div className="ch-directory-entry" key={item.session_id} role="listitem">
                     <div className="ch-directory-entry-top"><strong>{item.state.toUpperCase()}</strong>
-                      <time dateTime={item.expires_at} className="ch-directory-clock">{remainingTime(item.expires_at, clockMs)}</time></div>
+                      {item.state.toLowerCase() === "completed" || item.state.toLowerCase() === "failed" ? (
+                        <span className="ch-directory-clock">CLOSED</span>
+                      ) : (
+                        <time dateTime={item.expires_at} className="ch-directory-clock">{remainingTime(item.expires_at, clockMs)}</time>
+                      )}</div>
                     <code title={item.session_id}>{item.session_id}</code>
                     <small>{item.submitted_party_ids.length} / 3 submissions · Created {new Date(item.created_at).toLocaleString()}</small>
                     <button type="button" disabled={busy} onClick={() => void openListedSession(item.session_id)}>OPEN SESSION <ArrowRight size={14}/></button>
@@ -389,8 +414,8 @@ export default function AdminDashboard({ token }: { token: string }) {
               <div className="ch-directory-list" role="list" aria-label="Registered and invited users">
                 {accountDirectory?.accounts.map((item) => (
                   <div className="ch-directory-entry ch-account-entry" role="listitem" key={item.username}>
-                    <div className="ch-directory-entry-top"><strong>{item.username}</strong><span className="ch-directory-account-status">{item.activation_status.toUpperCase()}</span></div>
-                    <small>{item.role.toUpperCase()} {item.party_id !== null ? `· FOUNDER ${item.party_id + 1}` : ""}</small>
+                    <div className="ch-directory-entry-top"><strong>{item.display_name || item.username}</strong><span className="ch-directory-account-status">{item.activation_status.toUpperCase()}</span></div>
+                    <small>{item.display_name ? `${item.username} · ` : ""}{item.role.toUpperCase()} {item.party_id !== null ? `· FOUNDER ${item.party_id + 1}` : ""}</small>
                     <small>Invitation created: {item.created_at ? new Date(item.created_at).toLocaleString() : "Not recorded (legacy account)"}</small>
                     {item.benchmark_id && <code title={item.benchmark_id}>Session: {item.benchmark_id}</code>}
                   </div>

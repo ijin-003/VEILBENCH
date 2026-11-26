@@ -167,6 +167,7 @@ export default function HomePage() {
   return (
     <>
     <AuthGateway
+      key={activate ? "activate" : "login"}
       activate={activate}
       busy={busy}
       message={message}

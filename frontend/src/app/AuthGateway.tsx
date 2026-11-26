@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { CSSProperties, FormEvent, PointerEvent } from "react";
 import {
   ArrowLeft,
@@ -66,11 +66,6 @@ export default function AuthGateway({
   const validInvitation = /^[A-Za-z0-9_-]{20,128}$/.test(invitation);
   const canActivate = validUsername && validInvitation && quality.lengthOk && !quality.tooCommon && passwordsMatch;
   const graphicRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setShowPassword(false);
-    setConfirmPassword("");
-  }, [activate]);
 
   function moveGraphic(event: PointerEvent<HTMLElement>) {
     if (event.pointerType !== "mouse" || !graphicRef.current) return;

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 const api = (process.env.NEXT_PUBLIC_API_URL || "https://localhost:8000").replace(/\/+$/, "");
-type InviteResult = { username: string; invitation: string };
+type InviteResult = { username: string; display_name?: string | null; invitation: string };
 export default function AccountInvite({ token, sessionId, partyId }: { token: string; sessionId: string; partyId: number }) {
   const [name, setName] = useState("");
   const [issued, setIssued] = useState<InviteResult | null>(null);
@@ -30,6 +30,7 @@ export default function AccountInvite({ token, sessionId, partyId }: { token: st
   return <div className="mt-3 space-y-2">
     <label className="block">Founder display name (duplicates allowed)<input className="input w-full" maxLength={80} value={name} disabled={Boolean(issued) || busy} onChange={e => setName(e.target.value)} /></label>
     {issued ? <>
+      {issued.display_name && <p><small>Founder: <strong>{issued.display_name}</strong></small></p>}
       <label className="block">Unique login ID<input className="input w-full" readOnly value={issued.username} /></label>
       <button type="button" className="button-secondary" onClick={() => void copy(issued.username, "Login ID")}>Copy login ID</button>
       <label className="block">Private invitation code<input className="input w-full" readOnly type="password" value={issued.invitation} /></label>
