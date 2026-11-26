@@ -4,7 +4,7 @@ import time
 from datetime import timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, Header
+from fastapi import APIRouter, Depends, HTTPException, Response, Header, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select, delete
 from sqlalchemy.exc import IntegrityError
@@ -15,6 +15,7 @@ from backend.models.account import Account, LoginSession
 from backend.models.session import BenchmarkSession
 from backend.security.accounts import Db, current_account, admin_account, digest, hash_password, verify_password
 from backend.security.tokens import issue_founder_token
+from backend.security.http_security import auth_throttle
 
 router = APIRouter(prefix="/accounts")
 Member = Annotated[Account, Depends(current_account)]
@@ -52,7 +53,8 @@ async def record_failure(db, account):
 
 
 @router.post("/login")
-async def login(body: Credentials, response: Response, db: Db):
+async def login(body: Credentials, response: Response, db: Db, request: Request):
+    await auth_throttle.enforce(request, action="login", username=body.username)
     account = await db.scalar(select(Account).where(Account.username == body.username).with_for_update())
     now = int(time.time())
     valid = await run_in_threadpool(verify_password, body.password, account.password_hash if account and account.password_hash else _DUMMY_HASH)
@@ -70,7 +72,8 @@ async def login(body: Credentials, response: Response, db: Db):
 
 
 @router.post("/activate")
-async def activate(body: Activation, db: Db):
+async def activate(body: Activation, db: Db, request: Request):
+    await auth_throttle.enforce(request, action="activation", username=body.username)
     account = await db.scalar(select(Account).where(Account.username == body.username).with_for_update())
     now = int(time.time())
     if not account or account.password_hash or not account.invitation_hash or account.invitation_expiry <= now or account.locked_until > now or not secrets.compare_digest(digest(body.invitation), account.invitation_hash):

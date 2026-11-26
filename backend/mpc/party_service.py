@@ -30,6 +30,7 @@ from backend.mpc.lifecycle import PartyLifecycle, PartyState
 from backend.mpc.party_state_store import PartyStateStore
 from backend.mpc.validation import validate_salary
 from backend.security.tokens import FounderCapability, FounderTokenError, verify_founder_token
+from backend.security.http_security import api_docs_enabled
 
 logger = logging.getLogger("veilbench.mpc.party_service")
 
@@ -254,6 +255,9 @@ app = FastAPI(
     version="0.2.0",
     description="Isolated MPyC party. It never exposes another party's input.",
     lifespan=_lifespan,
+    docs_url="/docs" if api_docs_enabled(os.environ.get("ENVIRONMENT", "development")) else None,
+    redoc_url="/redoc" if api_docs_enabled(os.environ.get("ENVIRONMENT", "development")) else None,
+    openapi_url="/openapi.json" if api_docs_enabled(os.environ.get("ENVIRONMENT", "development")) else None,
 )
 app.add_middleware(
     CORSMiddleware,
