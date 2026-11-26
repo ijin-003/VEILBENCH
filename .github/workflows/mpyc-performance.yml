@@ -1,0 +1,55 @@
+name: Phase C MPC performance baseline
+
+on:
+  pull_request:
+    paths:
+      - "scripts/benchmark_mpyc_phase_c.py"
+      - ".github/workflows/mpyc-performance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install project dependencies
+        run: python -m pip install -r backend/requirements.txt
+      - name: Run real three-process MPyC benchmark
+        run: python -m scripts.benchmark_mpyc_phase_c --runs 6 --warmup 1
+      - name: Run existing disconnected-party safety regression
+        run: python -m pytest backend/tests/test_mpyc_protocol.py -k disconnected_party_handling -q --junitxml=artifacts/missing-party.xml
+      - name: Validate cleanup and restart reliability controls
+        run: >-
+          python -m pytest
+          backend/tests/test_distributed.py
+          backend/tests/test_hardening.py
+          backend/tests/test_party_state_store.py
+          backend/tests/test_coordinator_process_cleanup.py
+          -k "shutdown_retries_until_all_parties_confirm_cleanup or
+          cleanup_failure_requires_operator_recovery or
+          operator_recovery_releases_barrier_after_all_parties_confirm or
+          operator_recovery_keeps_barrier_if_cleanup_is_unconfirmed or
+          restarted_party_state_fails_session_closed or
+          founder_capability_replay_is_rejected_after_party_restart or
+          state_survives_store_recreation or
+          legacy_runner_timeout_kills_reaps_and_drains_all_processes"
+          -q --junitxml=artifacts/reliability.xml
+      - name: Upload benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: veilbench-mpyc-phase-c-metrics
+          path: |
+            artifacts/mpyc-benchmark.json
+            artifacts/missing-party.xml
+            artifacts/reliability.xml
+          if-no-files-found: warn

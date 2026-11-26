@@ -1,0 +1,83 @@
+{
+  "project": "VEILBENCH",
+  "phase": "E",
+  "captured_utc": "2026-11-23",
+  "sources": {
+    "ci_run_url": "https://github.com/ijin-003/VEILBENCH/actions/runs/45075066668",
+    "render_service": "srv-dc1h06rl550s73efug7g",
+    "render_query_window_utc": [
+      "2026-11-22T00:00:00Z",
+      "2026-11-23T01:40:00Z"
+    ],
+    "render_resolution_seconds": 3600,
+    "phase_e_ci_run_url": "https://github.com/ijin-003/VEILBENCH/actions/runs/45097787336"
+  },
+  "ci_mpyc_local": {
+    "warmups": 1,
+    "measured_runs": 6,
+    "latency_ms": {
+      "min": 175.84,
+      "median": 179.73,
+      "mean": 181.21,
+      "p95_nearest_rank": 188.02,
+      "max": 188.02
+    },
+    "max_single_child_peak_rss_kib": 29932,
+    "all_correct": true,
+    "scope": "GitHub Actions Linux: local three MPyC subprocesses, excludes hosted HTTP/database"
+  },
+  "render_memory_hourly_samples_bytes": [
+    {
+      "timestamp": "2026-11-22T16:00:00Z",
+      "bytes": 70455300
+    },
+    {
+      "timestamp": "2026-11-22T18:00:00Z",
+      "bytes": 77144060
+    },
+    {
+      "timestamp": "2026-11-22T19:00:00Z",
+      "bytes": 76627970
+    },
+    {
+      "timestamp": "2026-11-22T20:00:00Z",
+      "bytes": 98205700
+    },
+    {
+      "timestamp": "2026-11-22T21:00:00Z",
+      "bytes": 98779140
+    },
+    {
+      "timestamp": "2026-11-22T22:00:00Z",
+      "bytes": 79269890
+    },
+    {
+      "timestamp": "2026-11-23T01:00:00Z",
+      "bytes": 108630020
+    }
+  ],
+  "render_missing_series": [
+    "cpu_usage",
+    "http_request_count",
+    "http_latency",
+    "instance_count"
+  ],
+  "hosted_compute_server_timing_ms": [],
+  "note": "Comparative CI benchmarks vary by runner; hosted timing not yet measured. Render memory sampling is sparse and not MPC peak RSS.",
+  "ci_mpyc_local_2026_11_23": {
+    "warmups": 1,
+    "measured_runs": 6,
+    "latency_ms": {
+      "min": 222.18,
+      "median": 242.2,
+      "mean": 239.53,
+      "p95_nearest_rank": 259.01,
+      "max": 259.01
+    },
+    "max_single_child_peak_rss_kib": 30068,
+    "all_correct": true,
+    "reliability_tests_passed": 8,
+    "missing_party_test_passed": true,
+    "scope": "Separate GitHub Actions Linux runner; subprocess time only"
+  }
+}
