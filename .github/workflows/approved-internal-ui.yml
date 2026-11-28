@@ -31,3 +31,7 @@ jobs:
       - run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: "1"
+      - name: Install Chromium for responsive browser checks
+        run: npx playwright install --with-deps chromium
+      - name: Exercise public and authenticated flows across viewports
+        run: npm run test:e2e
