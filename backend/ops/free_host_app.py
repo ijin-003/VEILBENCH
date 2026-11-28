@@ -7,11 +7,58 @@ routes; the three real MPyC workers run as subprocesses when computing.
 
 import importlib.util
 import os
+import re
+import secrets
 import sys
 from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import Response
+from starlette.types import ASGIApp, Receive, Scope, Send
+
+_CONTROL_ROUTE = re.compile(r"^/sessions/[^/]+/(?:status|compute|result|shutdown)/?$")
+
+
+class _HideUnauthenticatedPartyControlRoutes:
+    """Return 404 for public control probes while retaining token-gated loopback calls."""
+
+    def __init__(self, app: ASGIApp, control_token: str) -> None:
+        if not control_token:
+            raise RuntimeError("Free-host party control token is not configured")
+        self.app = app
+        self.control_token = control_token
+
+    @staticmethod
+    def _relative_path(scope: Scope) -> str:
+        path = scope.get("path", "")
+        root_path = scope.get("root_path", "")
+        if root_path and path.startswith(root_path):
+            return path[len(root_path):] or "/"
+        return path
+
+    def _has_valid_control_token(self, scope: Scope) -> bool:
+        authorization = next(
+            (
+                value.decode("latin-1")
+                for key, value in scope.get("headers", [])
+                if key.lower() == b"authorization"
+            ),
+            "",
+        )
+        return authorization.startswith("Bearer ") and secrets.compare_digest(
+            authorization[7:], self.control_token
+        )
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if (
+            scope["type"] == "http"
+            and _CONTROL_ROUTE.fullmatch(self._relative_path(scope))
+            and not self._has_valid_control_token(scope)
+        ):
+            await Response(status_code=404)(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
 
 
 def load_party_app(party_id: int):
@@ -60,7 +107,10 @@ def create_app():
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     for i, party_app in enumerate(party_apps):
-        app.mount(f"/party/{i}", party_app)
+        app.mount(
+            f"/party/{i}",
+            _HideUnauthenticatedPartyControlRoutes(party_app, os.environ[f"MPC_NODE{i}_TOKEN"]),
+        )
     # Must come last; main app handles /api/v1, /health, and root.
     app.mount("/", coordinator_app)
     return app

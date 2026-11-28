@@ -48,6 +48,15 @@ def test_free_host_urls_and_neon_connection(monkeypatch):
     assert os.environ["MPC_REQUIRE_TLS"] == "false"
 
 
+def test_free_host_smoke_mode_is_explicit_about_cohosting():
+    root = Path(__file__).resolve().parents[2]
+    smoke = (root / "scripts" / "smoke_test_public.py").read_text(encoding="utf-8")
+    deployment = (root / "docs" / "ZERO_BUDGET_DEPLOYMENT.md").read_text(encoding="utf-8")
+    assert "--allow-cohosted-mpc" in smoke
+    assert "require_mpyc_tls=not args.allow_cohosted_mpc" in smoke
+    assert "--allow-cohosted-mpc" in deployment
+
+
 @pytest.mark.asyncio
 async def test_free_host_mounts_three_distinct_parties(monkeypatch, tmp_path):
     from scripts.start_free_host import configure
@@ -67,5 +76,15 @@ async def test_free_host_mounts_three_distinct_parties(monkeypatch, tmp_path):
             r = await client.get(f"/party/{i}/health")
             assert r.status_code == 200 and r.json()["party_id"] == i
             assert r.json()["mpyc_tls_enabled"] is False
+            control_url = f"/party/{i}/sessions/public-control-probe/status"
+            control_token = f"control{i}" * 8
+            assert (await client.get(control_url)).status_code == 404
+            assert (await client.post(control_url.removesuffix("status") + "compute", json={})).status_code == 404
+            authorized = await client.get(control_url, headers={"Authorization": f"Bearer {control_token}"})
+            assert authorized.status_code == 200
+            founder_input = await client.post(
+                f"/party/{i}/sessions/public-control-probe/input", json={"salary": 50000}
+            )
+            assert founder_input.status_code == 401
         assert (await client.get("/health")).json()["service"] == "VEILBENCH"
         assert (await client.get("/party/3/health")).status_code == 404

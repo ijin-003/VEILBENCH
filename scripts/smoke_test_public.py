@@ -2,8 +2,8 @@
 """Read-only public HTTPS smoke tests for the VEILBENCH academic deployment.
 
 The script checks API/party health, CORS preflight, founder-route authentication,
-and that private party-control routes are not exposed through Caddy. It does not
-create sessions, submit salaries, or trigger MPC computation.
+and that private party-control routes are hidden from unauthenticated public
+probes. It does not create sessions, submit salaries, or trigger MPC computation.
 """
 from __future__ import annotations
 
@@ -41,15 +41,19 @@ def retry_request(url: str, retries: int, delay: float) -> tuple[int, dict[str, 
     raise RuntimeError(f"Endpoint did not become healthy: {url} ({last_error})")
 
 
-def check_party(base_url: str, party_id: int, frontend_origin: str) -> None:
+def check_party(
+    base_url: str, party_id: int, frontend_origin: str, *, require_mpyc_tls: bool
+) -> None:
     base = base_url.rstrip("/")
     status, _, body = retry_request(f"{base}/health", retries=8, delay=2)
     data = json.loads(body)
     if status != 200 or data.get("status") != "healthy" or data.get("party_id") != party_id:
         raise RuntimeError(f"Party {party_id} health identity mismatch")
-    if data.get("mpyc_tls_enabled") is not True:
-        raise RuntimeError(f"Party {party_id} reports MPyC TLS disabled")
-    print(f"PASS: Party {party_id} public health and MPyC TLS flag")
+    if data.get("mpyc_tls_enabled") is not require_mpyc_tls:
+        expected = "enabled" if require_mpyc_tls else "disabled for the co-hosted demo"
+        raise RuntimeError(f"Party {party_id} MPyC TLS flag did not match the expected {expected} mode")
+    tls_mode = "enabled" if require_mpyc_tls else "disabled in the explicitly co-hosted demo mode"
+    print(f"PASS: Party {party_id} public health; MPyC TLS is {tls_mode}")
 
     session_id = str(uuid.uuid4())
     preflight_status, preflight_headers, _ = request(
@@ -100,6 +104,11 @@ def main() -> int:
     parser.add_argument("--party-1-url", required=True)
     parser.add_argument("--party-2-url", required=True)
     parser.add_argument("--frontend-origin", required=True)
+    parser.add_argument(
+        "--allow-cohosted-mpc",
+        action="store_true",
+        help="Verify the $0 single-container demo where MPyC peer TLS is intentionally disabled.",
+    )
     parser.add_argument("--retries", type=int, default=6)
     parser.add_argument("--retry-delay", type=float, default=3.0)
     args = parser.parse_args()
@@ -114,7 +123,12 @@ def main() -> int:
             raise RuntimeError("Coordinator readiness response is invalid")
         print("PASS: Coordinator API and PostgreSQL readiness")
         for party_id, url in enumerate((args.party_0_url, args.party_1_url, args.party_2_url)):
-            check_party(url, party_id, args.frontend_origin.rstrip("/"))
+            check_party(
+                url,
+                party_id,
+                args.frontend_origin.rstrip("/"),
+                require_mpyc_tls=not args.allow_cohosted_mpc,
+            )
     except (RuntimeError, ValueError, URLError, TimeoutError, OSError, json.JSONDecodeError) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         return 1

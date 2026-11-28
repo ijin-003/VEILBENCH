@@ -20,6 +20,24 @@ The original `docker-compose.production.yml` / mTLS configuration remains availa
 4. **Link the origins:** In Render, set `FRONTEND_PUBLIC_URL` to the **exact** Vercel HTTPS origin and redeploy. In Vercel set the four `NEXT_PUBLIC_` variables to the **exact** Render origin and redeploy. They are build-time variables and must be set **before the final Vercel build**.
 5. **Smoke test:** Open `https://<render-host>/health/ready` and all three `https://<render-host>/party/{0,1,2}/health`. Open the Vercel frontend; log in with your admin account, create a benchmark, issue three invitations, activate three participant accounts in separate browser profiles, submit synthetic salaries, click Compute, and verify total and average. Do not claim success until live MPyC computation succeeds.
 
+For the one-container demo, run the read-only public smoke check with its explicit
+co-hosted mode. It expects party control routes to be hidden from unauthenticated
+public requests, and it accurately reports that MPyC peer TLS is disabled in this
+shared-host topology:
+
+```bash
+python3 scripts/smoke_test_public.py \
+  --api-url https://<render-host> \
+  --party-0-url https://<render-host>/party/0 \
+  --party-1-url https://<render-host>/party/1 \
+  --party-2-url https://<render-host>/party/2 \
+  --frontend-origin https://<vercel-host> \
+  --allow-cohosted-mpc
+```
+
+Without `--allow-cohosted-mpc`, the same script remains a fail-closed check for
+the separate-host production topology and requires MPyC TLS.
+
 ### Render environment variables
 
 | Key | Where to get value |
