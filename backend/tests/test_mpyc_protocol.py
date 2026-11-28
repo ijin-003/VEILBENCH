@@ -222,3 +222,27 @@ async def test_zero_knowledge_isolation():
             if j != i:
                 assert party_res["aggregate_sum"] != other_salary
                 assert party_res["average_salary"] != float(other_salary)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("salaries", "expected_sum", "expected_avg", "base_port"),
+    [
+        ([0, 0, 0], 0, 0.0, 12190),
+        ([100, 200, 300], 600, 200.0, 12200),
+        ([1, 2, 4], 7, 7.0 / 3.0, 12210),
+        ([1000000, 2000000, 3000000], 6000000, 2000000.0, 12220),
+    ],
+)
+async def test_audit_required_synthetic_computations(
+    salaries: list[int], expected_sum: int, expected_avg: float, base_port: int
+):
+    """Verify genuine 3-party MPyC computation across all required audit test vectors."""
+    coordinator = MPCCoordinator()
+    result = await coordinator.execute_protocol(salaries, custom_base_port=base_port)
+    assert result["parties_count"] == 3
+    assert result["aggregate_sum"] == expected_sum
+    assert result["average_salary"] == pytest.approx(expected_avg)
+    for party_res in result["party_results"]:
+        assert party_res["aggregate_sum"] == expected_sum
+        assert party_res["average_salary"] == pytest.approx(expected_avg)

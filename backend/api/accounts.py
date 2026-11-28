@@ -204,6 +204,8 @@ async def assignment(response: Response, db: Db, account: Member):
         raise HTTPException(410, "Your benchmark session has expired")
     response.headers["Cache-Control"] = "no-store"
     party_id = account.party_id
+    if party_id not in (0, 1, 2):
+        raise HTTPException(403, "Invalid founder slot")
     return {
         "session_id": benchmark.id, "party_id": party_id,
         "capability": issue_founder_token(settings.founder_secrets[party_id], benchmark.id, party_id, expiry(benchmark)),
