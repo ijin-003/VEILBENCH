@@ -340,7 +340,9 @@ async def _assert_full_stack_three_party_round_trip(tmp_path: Path) -> None:
             assert computed.json()["state"] == SessionState.COMPLETED.value
             assert computed.json()["result"] == {"aggregate_sum": 180_000, "average_salary": 60_000}
             assert "coordinator-compute;dur=" in computed.headers["Server-Timing"]
-            assert not any(str(salary) in computed.text for salary in SYNTHETIC_SALARIES)
+            assert '"private_input"' not in computed.text
+            assert '"salary"' not in computed.text
+            assert "50000" not in computed.text and "70000" not in computed.text
     finally:
         if database.available:
             await database.stop()
